@@ -1,0 +1,1 @@
+lint-cleanup 2026-09-16: reverted in c65a1830ef6fc2c838358915f16abe43661d7cda; failed scalar_member_index
