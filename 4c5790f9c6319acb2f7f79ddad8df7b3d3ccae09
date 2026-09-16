@@ -1,0 +1,1 @@
+lint-cleanup 2026-09-16: reverted in fefe5930ad751538446e86510699518a62ac3fbf; failed m2c_goto_label, sms_pch_string_convention, unused_static_data
