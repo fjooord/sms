@@ -1,0 +1,1 @@
+lint-cleanup 2026-09-16: reverted in a42342c4658adb0fdd77ca59bbc7887205eaf6bd; failed discarded_expression
