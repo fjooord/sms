@@ -1,0 +1,1 @@
+lint-cleanup 2026-09-16: reverted in ec3ac381a4660e048506e26df5ca869c933bbf1e; failed unused_static_data
