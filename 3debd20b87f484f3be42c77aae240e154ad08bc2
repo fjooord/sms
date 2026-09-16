@@ -1,0 +1,1 @@
+lint-cleanup 2026-09-16: reverted in 682858007ea01e5b0a5bde08a8da27de8dffa2d6; failed m2c_goto_label
