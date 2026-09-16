@@ -1,0 +1,1 @@
+lint-cleanup 2026-09-16: reverted in 501f9ceb720fc0c397c02e11687e233aff334167; failed local_class_shadows_header
