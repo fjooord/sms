@@ -1,0 +1,1 @@
+lint-cleanup 2026-09-16: reverted in 78ad5842f5fe6b7439cf72cb4a8cfc38d63069e9; failed sms_local_class_needs_owner
