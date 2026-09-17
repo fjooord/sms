@@ -80,7 +80,7 @@ void TBaseNPC::setNpcAnm_(EnumNpcAnmKind param_1,
 	if (unk168 != nullptr && isPartsAnmNpc()) {
 		switch (mActorType) {
 		case 0x4000018: {
-			bool bVar8 = checkUnk1D8(UNK1D8_FLAG_UNK1);
+			bool bVar8     = checkUnk1D8(UNK1D8_FLAG_UNK1);
 			MActor* mactor = unk168->getPartsMActor(0, 0);
 			if (mactor != nullptr) {
 				int iVar7;
@@ -373,7 +373,7 @@ EnumNpcAnmKind TBaseNPC::getNpcWaitAnmBase_()
 void TBaseNPC::npcWaitIn()
 {
 	EnumNpcAnmKind kind = NPC_ANM_KIND_UNK1;
-	bool canSelectWait   = !checkActionFlag(NPC_ACTION_UNK400);
+	bool canSelectWait  = !checkActionFlag(NPC_ACTION_UNK400);
 
 	if (canSelectWait) {
 		if (!isClean()) {
@@ -417,8 +417,7 @@ bool TBaseNPC::npcRecoverFromSinking()
 
 	bool bVar2 = checkLiveFlag(LIVE_FLAG_UNK8000000);
 	if (!bVar2) {
-		bool bVar3
-		    = mMActor->getFrameCtrl(ANM_TYPE_BCK)->checkPass(32.0f);
+		bool bVar3 = mMActor->getFrameCtrl(ANM_TYPE_BCK)->checkPass(32.0f);
 		if (bVar3) {
 			onLiveFlag(LIVE_FLAG_UNK8000000);
 			f32 dVar6 = getGravityY();
@@ -979,7 +978,7 @@ void TBaseNPC::sunflowerReviveIn()
 bool TBaseNPC::sunflowerReviving()
 {
 	bool result = false;
-	bool bVar1 = checkUnk1D8(UNK1D8_FLAG_UNK2);
+	bool bVar1  = checkUnk1D8(UNK1D8_FLAG_UNK2);
 	if (bVar1 && unkD0->getCurrentAnmKind() == NPC_ANM_KIND_UNK1A) {
 		if (mMActor->isCurAnmAlreadyEnd(ANM_TYPE_BCK)) {
 			offUnk1D8(UNK1D8_FLAG_UNK2);

@@ -624,8 +624,8 @@ void TEnemyMario::startMonteReplay(u32 replayIndex)
 	JGeometry::TVec3<s16> direction;
 	f32 xDifference = nextPoint.x - currentPoint.x;
 	f32 zDifference = nextPoint.z - currentPoint.z;
-	direction.y = matan(zDifference, xDifference);
-	mFaceAngle.y = direction.y;
+	direction.y     = matan(zDifference, xDifference);
+	mFaceAngle.y    = direction.y;
 	resetReplayStatus();
 	mReplayIndex = replayIndex;
 	mInputReplays[mReplayIndex]->reset();
@@ -980,8 +980,8 @@ void TEnemyMario::emReplayJumpToNearestNode()
 
 	JGeometry::TVec3<f32> marioDirection(*gpMarioPos - currentPoint);
 	marioDirection.normalize();
-	f32 marioDirectionX = marioDirection.x;
-	f32 marioDirectionY = marioDirection.y;
+	f32 marioDirectionX  = marioDirection.x;
+	f32 marioDirectionY  = marioDirection.y;
 	TGraphNode* nextNode = nullptr;
 
 	if (mSettingParams->mRandomFlag.get() == 0) {
@@ -1162,8 +1162,10 @@ void TEnemyMario::runAwayMoveEffect()
 void TEnemyMario::emRunAwayToNearestNode()
 {
 	JGeometry::TVec3<f32> targetPoint;
-	mEMario->getTracer()->getGraph()->getGraphNode(mRunAwayNodeIndex).getPoint(
-	    &targetPoint);
+	mEMario->getTracer()
+	    ->getGraph()
+	    ->getGraphNode(mRunAwayNodeIndex)
+	    .getPoint(&targetPoint);
 	runAwayMoveEffect();
 
 	if (mEMDoingTimer >= 8 && mEMDoingTimer < 300) {
@@ -1478,7 +1480,8 @@ void TEnemyMario::hitWater(THitActor* sender)
 			gpMarioParticleManager->emit(PARTICLE_MS_ENM_WATHIT,
 			                             &sender->mPosition, 0, nullptr);
 			SMSGetMSound()->startSoundSet(MSD_SE_EN_COMMON_W_HIT_OK,
-			                              &sender->mPosition, 0, 30.0f, 0, 0, 4);
+			                              &sender->mPosition, 0, 30.0f, 0, 0,
+			                              4);
 			mWaterEffectTimer = mWaterEffectTimerMax;
 
 			if (mEMDoing == EM_DOING_REPLAY_WAITING) {
@@ -1689,7 +1692,7 @@ void TEnemyMario::drawHPMeter(MtxPtr viewMtx)
 	f32 borderRight  = left + 96.0f + 5.0f;
 	f32 borderTop    = top - 5.0f;
 	f32 borderBottom = bottom + 5.0f;
-	color = (GXColor) { 0, 0, 0, 0xC0 };
+	color            = (GXColor) { 0, 0, 0, 0xC0 };
 	GXSetChanMatColor(GX_COLOR0A0, color);
 	GXBegin(GX_QUADS, GX_VTXFMT0, 4);
 	GXPosition3f32(borderLeft, borderTop, screenPosition.z);
@@ -1699,7 +1702,7 @@ void TEnemyMario::drawHPMeter(MtxPtr viewMtx)
 	GXEnd();
 
 	f32 right = left + mWaterCounter * 1.5f;
-	color = (GXColor) { 0x40, 0x40, 0xFF, 0xFF };
+	color     = (GXColor) { 0x40, 0x40, 0xFF, 0xFF };
 	GXSetChanMatColor(GX_COLOR0A0, color);
 	GXBegin(GX_QUADS, GX_VTXFMT0, 4);
 	GXPosition3f32(left, top, screenPosition.z);

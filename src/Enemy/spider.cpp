@@ -38,15 +38,14 @@ void TSpider::bind(TLiveActor* param_1)
 
 	const TBGCheckData* local_60;
 	f32 fVar3 = gpMap->checkGround(
-	    local_50.x, local_50.y + enemy->getHeadHeight(),
-	    local_50.z, &local_60);
+	    local_50.x, local_50.y + enemy->getHeadHeight(), local_50.z, &local_60);
 	fVar3 += 1.0f;
 
 	if (enemy->mPosition.y - local_50.y > 0.0f) {
 		const TBGCheckData* local_64;
 		f32 dVar7 = gpMap->checkGround(
-		    local_50.x, enemy->mPosition.y + enemy->getHeadHeight(),
-		    local_50.z, &local_64);
+		    local_50.x, enemy->mPosition.y + enemy->getHeadHeight(), local_50.z,
+		    &local_64);
 		dVar7 += 1.0f;
 		if (dVar7 > fVar3) {
 			local_60 = local_64;
@@ -79,9 +78,8 @@ void TSpider::bind(TLiveActor* param_1)
 	enemy->mGroundHeight = fVar3;
 	enemy->mGroundPlane  = local_60;
 
-	TBGWallCheckRecord local_90(
-	    local_50.x, local_50.y, local_50.z,
-	    enemy->mBodyScale * enemy->mHeadHeight, 1, 0);
+	TBGWallCheckRecord local_90(local_50.x, local_50.y, local_50.z,
+	                            enemy->mBodyScale * enemy->mHeadHeight, 1, 0);
 
 	JGeometry::TVec3<f32> local_bc;
 	f32 unaff_f29;

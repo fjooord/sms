@@ -36,8 +36,7 @@
 #include <MSound/MSoundBGM.hpp>
 #include <System/DummyStrings.hpp>
 
-static u32 scNormalStageTable[]
-    = { 0, 1, 2, 3, 4, 13, 6, 8, 9, 10 };
+static u32 scNormalStageTable[] = { 0, 1, 2, 3, 4, 13, 6, 8, 9, 10 };
 
 // fabricated and not matching
 inline void bzero(void* pDst, u32 len)
@@ -347,10 +346,17 @@ void TSelectMenu::initData(u8 stage, JKRArchive* pArch,
 	    = { 0x0, 0x0, 0x2, 0x3, 0x4, 0x5, 0x6, 0x0, 0x7, 0x8, 0x0 };
 
 	const u8* const stages[] = {
-		nullptr,                nullptr,               scShineTableBiancoEtc,
-		scShineTableRiccoEtc,   scShineTableMammaEtc,  scShineTablePinnaEtc,
-		scShineTableSirenaEtc,  nullptr,               scShineTableMonteEtc,
-		scShineTableMareEtc,    nullptr,
+		nullptr,
+		nullptr,
+		scShineTableBiancoEtc,
+		scShineTableRiccoEtc,
+		scShineTableMammaEtc,
+		scShineTablePinnaEtc,
+		scShineTableSirenaEtc,
+		nullptr,
+		scShineTableMonteEtc,
+		scShineTableMareEtc,
+		nullptr,
 	};
 
 	s32 numCoins = TFlagManager::getInstance()->getFlag(SMS_getShineStage(stage)

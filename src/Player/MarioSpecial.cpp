@@ -524,10 +524,9 @@ BOOL TMario::hanging()
 			newPos = record3.mCenter;
 
 			const TBGCheckData* groundDummy;
-			f32 z = newPos.z;
-			f32 y = 50.0f + newPos.y;
-			f32 groundY
-			    = gpMap->checkGround(newPos.x, y, z, &groundDummy);
+			f32 z       = newPos.z;
+			f32 y       = 50.0f + newPos.y;
+			f32 groundY = gpMap->checkGround(newPos.x, y, z, &groundDummy);
 			if (mPosition.y - 100.0f < groundY
 			    && groundY < 50.0f + mPosition.y) {
 				TBGWallCheckRecord record4(
@@ -560,7 +559,7 @@ BOOL TMario::hanging()
 					mFaceAngle.y = matan(foundWall2->getNormal().z,
 					                     foundWall2->getNormal().x)
 					               + 0x8000;
-					f32 offset = 40.0f * foundWall2->getNormal().x;
+					f32 offset  = 40.0f * foundWall2->getNormal().x;
 					mPosition.x = record4.mCenter.x - offset;
 					mPosition.z
 					    = record4.mCenter.z - 40.0f * foundWall2->getNormal().z;
@@ -680,10 +679,10 @@ BOOL TMario::wireMove(f32 param_1)
 {
 	JGeometry::TVec3<f32> start = mWireStartPos;
 	JGeometry::TVec3<f32> dir;
-	dir     = mWireEndPos - start;
-	f32 len = dir.length();
-	f32 delta                   = param_1 / len;
-	f32 margin                  = 100.0f / len;
+	dir        = mWireEndPos - start;
+	f32 len    = dir.length();
+	f32 delta  = param_1 / len;
+	f32 margin = 100.0f / len;
 
 	BOOL clean = true;
 	if (mWirePosRatio + delta > 1.0f - margin) {
@@ -1026,7 +1025,7 @@ BOOL TMario::wireRolling()
 	s16 wireAngle;
 	JGeometry::TVec3<f32> start = mWireStartPos;
 	JGeometry::TVec3<f32> dir;
-	dir = mWireEndPos - start;
+	dir       = mWireEndPos - start;
 	mPosition = dir * mWirePosRatio + start;
 	mPosition.y -= 160.0f;
 	Mtx rotA;
@@ -1382,7 +1381,7 @@ BOOL TMario::fenceMove()
 	if (wall != nullptr) {
 		if (mInput & 0x1) {
 			JGeometry::TVec3<f32> newPos = mPosition;
-			f32 fenceSpeed = mJumpParams.mFenceSpeed.get();
+			f32 fenceSpeed               = mJumpParams.mFenceSpeed.get();
 			newPos.y += 0.015625f * unk108->mStickV * fenceSpeed;
 
 			s16 camDelta = mFaceAngle.y - gpCamera->unk258;
@@ -1471,7 +1470,7 @@ BOOL TMario::fenceMove()
 		if (mIntendedMag > 0.0f) {
 			f32 hDot, vDiff, dist;
 			if (unk2C0 == nullptr) {
-				vDiff    = mPosition.y - mPrevPosition.y;
+				vDiff = mPosition.y - mPrevPosition.y;
 				JGeometry::TVec3<f32> forward(JMASSin(mFaceAngle.y), 0.0f,
 				                              JMASCos(mFaceAngle.y));
 				JGeometry::TVec3<f32> up(0.0f, 1.0f, 0.0f);

@@ -397,7 +397,8 @@ DEFINE_NERVE(TNerveMameGessoGraphJumpWander, TLiveActor)
 		    && !(self->getGroundPlane()->mBGType == BG_TYPE_WATER
 		         || self->getGroundPlane()->mBGType == BG_TYPE_DAMAGING_WATER
 		         || self->getGroundPlane()->mBGType == BG_TYPE_SEA_WATER
-		         || self->getGroundPlane()->mBGType == BG_TYPE_DAMAGING_SEA_WATER
+		         || self->getGroundPlane()->mBGType
+		                == BG_TYPE_DAMAGING_SEA_WATER
 		         || self->getGroundPlane()->mBGType == BG_TYPE_POOL
 		         || self->getGroundPlane()->mBGType == BG_TYPE_INDOOR_POOL)) {
 			if (!self->isAirborne())
@@ -548,13 +549,13 @@ DEFINE_NERVE(TNerveMameGessoThrown, TLiveActor)
 
 		// TODO: ugly matching
 		s16 angle        = *gpMarioAngleY & 0xffff;
-		f32 throwPower  = *gpMarioThrowPower;
-		f32 velX        = throwPower * JMASSin(angle);
-		f32 velZ        = throwPower * JMASCos(angle);
+		f32 throwPower   = *gpMarioThrowPower;
+		f32 velX         = throwPower * JMASSin(angle);
+		f32 velZ         = throwPower * JMASCos(angle);
 		f32 thrownRateXZ = params->mSLThrownRateXZ.get();
 		JGeometry::TVec3<f32> vel(thrownRateXZ * velX,
-		                               params->mSLThrownVY.get(),
-		                               thrownRateXZ * velZ);
+		                          params->mSLThrownVY.get(),
+		                          thrownRateXZ * velZ);
 
 		self->setVelocity(vel);
 

@@ -84,8 +84,8 @@ void TMapCollisionBase::updateTrans(const JGeometry::TVec3<f32>& param_1)
 	JGeometry::TVec3<f32> delta = param_1 - mPrevTranslation;
 
 	TBGCheckData* checkDataIt = mCheckDatas;
-	f32 y = delta.y;
-	f32 z = delta.z;
+	f32 y                     = delta.y;
+	f32 z                     = delta.z;
 	for (int i = 0; i < mCheckDataNum; ++checkDataIt, ++i) {
 		checkDataIt->mPoint1.x += delta.x;
 		checkDataIt->mPoint1.y += y;

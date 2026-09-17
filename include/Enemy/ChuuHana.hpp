@@ -7,7 +7,8 @@
 
 class TChuuHana : public TWalkerEnemy {
 public:
-	TChuuHana(const char*); // declared only: suppresses the implicit default constructor
+	TChuuHana(const char*); // declared only: suppresses the implicit default
+	                        // constructor
 	// static members (map: .sdata)
 	static u32 mCheckOnPanelTimeRoll;
 	static u32 mCheckOnPanelTime;

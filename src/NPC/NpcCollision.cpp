@@ -69,14 +69,13 @@ void TBaseNPC::execNpcObjCollision_()
 				local_4C.z = 0.0f;
 			}
 		} else {
-			f32 dVar8
-			    = mAttackRadius + mCollisions[i]->mDamageRadius
-			              - MsVECMag2(local_4C)
-			              >= 0.0f
-			          ? mAttackRadius + mCollisions[i]->mDamageRadius
-			                - MsVECMag2(local_4C)
-			          : -(mAttackRadius + mCollisions[i]->mDamageRadius
-			              - MsVECMag2(local_4C));
+			f32 dVar8 = mAttackRadius + mCollisions[i]->mDamageRadius
+			                        - MsVECMag2(local_4C)
+			                    >= 0.0f
+			                ? mAttackRadius + mCollisions[i]->mDamageRadius
+			                      - MsVECMag2(local_4C)
+			                : -(mAttackRadius + mCollisions[i]->mDamageRadius
+			                    - MsVECMag2(local_4C));
 
 			if (dVar8 < 0.001f)
 				dVar8 = 0.001f;

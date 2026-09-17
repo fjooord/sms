@@ -217,8 +217,7 @@ void TBaseNPC::releaseTaken_()
 {
 	f32 fVar1 = mPtrSaveNormal->mThrowSpeedXZ.get();
 	s16 uVar4 = CLBDegToShortAngle(unk158->mRotation.y);
-	mVelocity.set(fVar1 * JMASSin(uVar4),
-	              mPtrSaveNormal->mThrowSpeedY.get(),
+	mVelocity.set(fVar1 * JMASSin(uVar4), mPtrSaveNormal->mThrowSpeedY.get(),
 	              fVar1 * JMASCos(uVar4));
 
 	onLiveFlag(LIVE_FLAG_UNK10000000);
@@ -344,8 +343,8 @@ void TBaseNPC::behaveToHitObject_(THitActor* param_1,
 		if (gpMarDirector->isTalkOrDemoModeNow())
 			return;
 
-		gpMarioParticleManager->emit(PARTICLE_MS_ENM_WATHIT, &param_1->mPosition, 0,
-		                             nullptr);
+		gpMarioParticleManager->emit(PARTICLE_MS_ENM_WATHIT,
+		                             &param_1->mPosition, 0, nullptr);
 		SMSGetMSound()->startSoundSet(MSD_SE_EN_COMMON_W_HIT_OK, &mPosition, 0,
 		                              0.0f, 0, 0, 4);
 		if (SMSGetMSound()->gateCheck(MSD_SE_NPC_FIRE_FIGHTING))
@@ -581,8 +580,8 @@ void TBaseNPC::changeNerveProc_()
 void TBaseNPC::setPosAndInitAfterSinkBottom()
 {
 	JGeometry::TVec3<f32> pos = unk194;
-	f32 y                         = pos.y;
-	f32 z                         = pos.z;
+	f32 y                     = pos.y;
+	f32 z                     = pos.z;
 
 	bool cVar8 = gpPollution->isPolluted(pos.x, y, z);
 	offLiveFlag(LIVE_FLAG_DEAD | LIVE_FLAG_HIDDEN | LIVE_FLAG_CLIPPED_OUT

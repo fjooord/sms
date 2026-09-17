@@ -16,7 +16,7 @@ BOOL NPCNeckCallBack(J3DNode* param_1, int param_2)
 		bool shouldRun = false;
 		if (gpCurrentNpc->mNeckJointIndex != -1) {
 			if (!gpCurrentNpc->checkLiveFlag(LIVE_FLAG_HIDDEN
-			                                  | LIVE_FLAG_CLIPPED_OUT))
+			                                 | LIVE_FLAG_CLIPPED_OUT))
 				shouldRun = true;
 		}
 

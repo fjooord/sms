@@ -30,7 +30,7 @@ void TBaseNPC::setHappyEffectMtxPtr_(const JUTNameTab* tab)
 		jointName = nullptr;
 
 	if (jointName != nullptr) {
-		int index = tab->getIndex(jointName);
+		int index          = tab->getIndex(jointName);
 		mHappyEffectMtxPtr = getModel()->getAnmMtx((u16)index);
 	}
 }
@@ -53,7 +53,7 @@ void TBaseNPC::setNoteEffectMtxPtr_(const JUTNameTab* tab)
 	}
 
 	if (jointName) {
-		int index = tab->getIndex(jointName);
+		int index         = tab->getIndex(jointName);
 		mNoteEffectMtxPtr = getModel()->getAnmMtx((u16)index);
 	}
 }
@@ -69,10 +69,10 @@ void TBaseNPC::setPollutionEffectMtxPtr_(const JUTNameTab* tab)
 	const char* pcVar5;
 	if (isNormalMonte()) {
 		int index = tab->getIndex(leftFootJoint);
-		unk200   = getModel()->getAnmMtx((u16)index);
-		index    = tab->getIndex(rightFootJoint);
-		unk204   = getModel()->getAnmMtx((u16)index);
-		pcVar5   = koshiNullJoint;
+		unk200    = getModel()->getAnmMtx((u16)index);
+		index     = tab->getIndex(rightFootJoint);
+		unk204    = getModel()->getAnmMtx((u16)index);
+		pcVar5    = koshiNullJoint;
 	} else if (isNormalMare()) {
 		pcVar5 = koshiJoint;
 	} else if (mActorType == 0x4000016) {
@@ -82,7 +82,7 @@ void TBaseNPC::setPollutionEffectMtxPtr_(const JUTNameTab* tab)
 	}
 
 	if (pcVar5) {
-		int index = tab->getIndex(pcVar5);
+		int index              = tab->getIndex(pcVar5);
 		mPollutionEffectMtxPtr = getModel()->getAnmMtx((u16)index);
 	}
 }

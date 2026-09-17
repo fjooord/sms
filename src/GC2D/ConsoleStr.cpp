@@ -664,10 +664,10 @@ void TConsoleStr::startCloseWipe(bool param_1)
 		local_74 = unk290[1]->getPane()->getBounds();
 		unk290[1]->setPaneOffset(0x2D, 0, 224 - local_74.y1, 0,
 		                         465 - unk290[1]->getInitialBounds().y1);
-		unk290[1]->setPaneSize(
-		    0x2D, local_74.getWidth(),
-		    local_64 + (465 - unk290[1]->getInitialBounds().y1),
-		    local_74.getWidth(), 0);
+		unk290[1]->setPaneSize(0x2D, local_74.getWidth(),
+		                       local_64
+		                           + (465 - unk290[1]->getInitialBounds().y1),
+		                       local_74.getWidth(), 0);
 		unk290[1]->setPaneAlpha(45, 255, 0);
 
 		unk2BC = 8;
@@ -684,17 +684,14 @@ void TConsoleStr::startCloseWipe(bool param_1)
 		int local_78     = 224;
 		unk290[0]->setPaneSize(0x2D, local_88.getWidth(), local_78,
 		                       local_88.getWidth(), local_88.getHeight());
-		unk290[0]->setPaneAlpha(45, 255,
-		                            unk290[0]->getPane()->getAlpha());
+		unk290[0]->setPaneAlpha(45, 255, unk290[0]->getPane()->getAlpha());
 
 		local_88 = unk290[1]->getPane()->getBounds();
 		unk290[1]->setPaneOffset(0x2D, 0, 224 - local_88.y1, 0,
 		                         465 - unk290[1]->getInitialBounds().y1);
-		unk290[1]->setPaneSize(0x2D, local_88.getWidth(),
-		                       465 - local_78 - 1, local_88.getWidth(),
-		                       local_88.getHeight());
-		unk290[1]->setPaneAlpha(45, 255,
-		                            unk290[1]->getPane()->getAlpha());
+		unk290[1]->setPaneSize(0x2D, local_88.getWidth(), 465 - local_78 - 1,
+		                       local_88.getWidth(), local_88.getHeight());
+		unk290[1]->setPaneAlpha(45, 255, unk290[1]->getPane()->getAlpha());
 	}
 }
 

@@ -89,7 +89,7 @@ bool TCubeManagerBase::isInCube(const Vec& v, s32 i) const
 	bool result = false;
 	if (i >= 0 && i < unk10) {
 		TCubeGeneralInfo& info = (*unk14)[i];
-		const Vec& unk24        = info.getUnk24();
+		const Vec& unk24       = info.getUnk24();
 		if (CLBIsPointInCube(v, info.getUnkC(), info.getUnk18(), unk24))
 			result = true;
 	}

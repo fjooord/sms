@@ -309,14 +309,14 @@ f32 TMapCollisionData::checkGround(f32 x, f32 y, f32 z, u8 flags,
 	int gridZ = (position.y + mGridExtentY) * (1.0f / 1024);
 
 	const TBGCheckData* local_60;
-	f32 dVar5 = checkGroundList(
-	    x, y, z, flags, getGridRoot18(gridX, gridZ).unk0[0].getNext(),
-	    &local_60);
+	f32 dVar5 = checkGroundList(x, y, z, flags,
+	                            getGridRoot18(gridX, gridZ).unk0[0].getNext(),
+	                            &local_60);
 
 	const TBGCheckData* local_64;
-	f32 dVar6 = checkGroundList(
-	    x, y, z, flags, getGridRoot14(gridX, gridZ).unk0[0].getNext(),
-	    &local_64);
+	f32 dVar6 = checkGroundList(x, y, z, flags,
+	                            getGridRoot14(gridX, gridZ).unk0[0].getNext(),
+	                            &local_64);
 
 	if (mGroundPlane != nullptr) {
 		const TBGCheckData* local_68;
@@ -426,8 +426,7 @@ static bool LineInLineXZ(const JGeometry::TVec2<f32>& a0,
                          const JGeometry::TVec2<f32>& b0,
                          const JGeometry::TVec2<f32>& b1)
 {
-	f32 value
-	    = (b0 - a0).cross(a1 - a0) * (b1 - a0).cross(a1 - a0);
+	f32 value = (b0 - a0).cross(a1 - a0) * (b1 - a0).cross(a1 - a0);
 	if (value <= 0.0f
 	    && (a1 - b0).cross(b1 - b0) * (a0 - b0).cross(b1 - b0) <= 0.0f)
 		return true;

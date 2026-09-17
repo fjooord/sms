@@ -529,8 +529,8 @@ void MSoundSE::startSoundActorWithInfo(u32 id, const Vec* position,
 			}
 
 			case MSD_SE_OBJ_JET_COASTER_IMI:
-				f32 d = JALCalc::linearTransform(fVar7, 0.0f, 20.0f, 0.0f,
-				                                 1.0f, true);
+				f32 d = JALCalc::linearTransform(fVar7, 0.0f, 20.0f, 0.0f, 1.0f,
+				                                 true);
 				sound->setVolume(d, 0, 0);
 				break;
 			}

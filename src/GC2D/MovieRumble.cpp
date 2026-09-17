@@ -70,7 +70,7 @@ void TMovieRumble::checkRumbleOff()
 void TMovieRumble::readCurInfo()
 {
 	Koga::ToolData* toolData = unk14;
-	int group                  = unk18;
+	int group                = unk18;
 
 	if (isValid() && toolData->isIndexValid(group)) {
 		toolData->GetValue(group, "start_frame", unk1C);

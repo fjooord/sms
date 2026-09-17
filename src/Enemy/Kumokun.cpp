@@ -680,8 +680,8 @@ void TKumokun::calcRootMatrix()
 	if (isFlying()) {
 		baseMtx = getModel()->getBaseTRMtx();
 		if (JPABaseEmitter* emitter
-		    = gpMarioParticleManager->emitAndBindToMtxPtr(
-		        PARTICLE_MS_KIL_SMOKE, baseMtx, 1, this)) {
+		    = gpMarioParticleManager->emitAndBindToMtxPtr(PARTICLE_MS_KIL_SMOKE,
+		                                                  baseMtx, 1, this)) {
 			emitter->setGlobalScale(JGeometry::TVec3<f32>(1.5f));
 			emitter->setGlobalAlpha(128);
 		}
@@ -755,12 +755,11 @@ void TKumokun::decideTargetAtDir(const JGeometry::TVec3<f32>& param_1)
 	local_C4.normalize();
 
 	JGeometry::TQuat4<f32> local_A4;
-	if (is_antiparallel(local_C4,
-	                    JGeometry::TVec3<f32>(0.0f, 0.0f, 1.0f))) {
+	if (is_antiparallel(local_C4, JGeometry::TVec3<f32>(0.0f, 0.0f, 1.0f))) {
 		local_A4.setEulerY(JGeometry::TUtil<f32>::PI());
 	} else {
-		local_A4.setRotate(JGeometry::TVec3<f32>(0.0f, 0.0f, 1.0f),
-		                   local_C4, 1.0f);
+		local_A4.setRotate(JGeometry::TVec3<f32>(0.0f, 0.0f, 1.0f), local_C4,
+		                   1.0f);
 	}
 
 	local_b4.mul(local_A4);

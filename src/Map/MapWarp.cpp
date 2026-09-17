@@ -33,7 +33,7 @@ void TMapWarp::watchToWarp()
 	                                     gpMarioPos->z, &checkData);
 
 	if (checkData->isWarp()) {
-		data = checkData->getData();
+		data     = checkData->getData();
 		int warp = unk4[data].unk0;
 		if (unk8 != warp) {
 			gpMap->getModelManager()->getJointModel(0)->getChild(unk8)->sleep();

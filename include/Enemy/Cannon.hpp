@@ -7,7 +7,8 @@
 
 class TCannon : public TSmallEnemy {
 public:
-	TCannon(const char*); // declared only: suppresses the implicit default constructor
+	TCannon(const char*); // declared only: suppresses the implicit default
+	                      // constructor
 	// static members (map: .sdata)
 	static u8 mChorobeiJntIdx;
 	static u8 mChorobeiHandJntIdx;

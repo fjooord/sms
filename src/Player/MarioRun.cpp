@@ -419,9 +419,9 @@ BOOL TMario::doSliding(f32 stopThreshold)
 
 	mSlideVelX
 	    += sn * (mSlideVelZ * (mIntendedMag / 32.0f)) * getSlideStickMult();
-	mSlideVelZ = -(
-	    (sn * (mSlideVelX * (mIntendedMag / 32.0f)) * getSlideStickMult())
-	    - mSlideVelZ);
+	mSlideVelZ
+	    = -((sn * (mSlideVelX * (mIntendedMag / 32.0f)) * getSlideStickMult())
+	        - mSlideVelZ);
 
 	f32 newMag = MsSqrtf(mSlideVelX * mSlideVelX + mSlideVelZ * mSlideVelZ);
 	if (oldMag > 0.0f && newMag > 0.0f) {
@@ -598,9 +598,8 @@ void TMario::doSurfing()
 	if (mForwardVel > powMax)
 		mForwardVel = powMax;
 
-	f32 tmp = want - powMin;
-	s16 rotSp
-	    = ((tmp / (powMax - powMin)) * (rotMax - rotMin)) + rotMin;
+	f32 tmp      = want - powMin;
+	s16 rotSp    = ((tmp / (powMax - powMin)) * (rotMax - rotMin)) + rotMin;
 	s16 diff     = mIntendedYaw - mFaceAngle.y;
 	mFaceAngle.y = mIntendedYaw - IConverge(diff, 0, rotSp, rotSp);
 	slopeProcess();
@@ -1038,7 +1037,7 @@ BOOL TMario::walkEnd()
 	}
 
 	f32 rate = 0.25f;
-	rate = mForwardVel * rate;
+	rate     = mForwardVel * rate;
 	if (rate < 0.1f)
 		rate = 0.1f;
 	setAnimation(ANIM_RUN1, rate);

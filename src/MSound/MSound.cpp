@@ -97,7 +97,7 @@ static bool loadWaveBackword(JASystem::WaveArcLoader::TObject* obj)
 		return false;
 
 	JASystem::Kernel::THeap* root = JASystem::WaveArcLoader::getRootHeap();
-	u32 address = (u32)root->mBase + root->unk10;
+	u32 address                   = (u32)root->mBase + root->unk10;
 	address -= extent;
 	if (!heap->selfAlloc(root, extent, address))
 		return false;

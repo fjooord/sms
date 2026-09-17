@@ -157,7 +157,7 @@ bool CPolarSubCamera::execWallCheck_(Vec* param_1)
 				TBGCheckData* wall = record.mResultWalls[i];
 				if (should_clip_fabricated(wall)) {
 					JGeometry::TVec3<f32> posArg = mCurrentTarget.mPosition;
-					Vec posCam = posArg;
+					Vec posCam                   = posArg;
 
 					f32 sd = posCam.x * wall->getNormal().x
 					         + posCam.y * wall->getNormal().y
@@ -206,7 +206,7 @@ bool CPolarSubCamera::execRoofCheck_(Vec param_1)
 		f32 roofLimit = roofHeight - mSaveEx->mSLRoofHeight.get();
 		if (currentY > roofLimit) {
 			mCurrentTarget.mPosition.y = roofLimit;
-			moved = true;
+			moved                      = true;
 		}
 	}
 	return moved;

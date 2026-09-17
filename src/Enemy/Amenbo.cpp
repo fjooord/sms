@@ -141,7 +141,7 @@ void TAmenbo::control()
 		mWaterGunHitCooldown = mWaterGunHitCooldown - 1;
 
 	if (mSearchDisableCooldown > 0) {
-		int cooldown = mSearchDisableCooldown - 1;
+		int cooldown           = mSearchDisableCooldown - 1;
 		mSearchDisableCooldown = cooldown;
 	}
 
@@ -329,8 +329,7 @@ void TAmenbo::doAdjustTarget()
 	vel *= 0.9f;
 	mVelocity = vel;
 
-	unk1E0
-	    = mMActor->getFrameCtrl(ANM_TYPE_BCK)->getFrame() * (1.0f / 63.0f);
+	unk1E0 = mMActor->getFrameCtrl(ANM_TYPE_BCK)->getFrame() * (1.0f / 63.0f);
 
 	if (1.0f <= unk1E0)
 		unk1E0 = 1.0f;

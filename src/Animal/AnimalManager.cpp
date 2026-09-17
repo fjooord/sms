@@ -25,16 +25,15 @@ void TAnimalManagerBase::clipEnemies(JDrama::TGraphics* graphics)
 {
 	f32 nearClip = mViewClipNear;
 
-	SetViewFrustumClipCheckPerspective(gpCamera->getFovy(),
-	                                   gpCamera->getAspect(), nearClip,
-	                                   *mViewClipFarPtr);
+	SetViewFrustumClipCheckPerspective(
+	    gpCamera->getFovy(), gpCamera->getAspect(), nearClip, *mViewClipFarPtr);
 
 	int e;
 	TLiveActor* actor;
 	int i;
 
 	for (e = getObjNum(), i = 0; i < e; ++i) {
-		actor = getObj(i);
+		actor                     = getObj(i);
 		JGeometry::TVec3<f32> pos = actor->mPosition;
 		pos.y += 75.0f;
 

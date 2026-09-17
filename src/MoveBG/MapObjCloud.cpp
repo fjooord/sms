@@ -146,8 +146,8 @@ void TRideCloud::control()
 				if (node.getRailNode()->mFlags & 0x800)
 					unk16C = node.getRailNode()->mPitch;
 
-				TRailNode* node2
-				    = web->getGraphNode(unk138->getCurGraphIndex()).getRailNode();
+				TRailNode* node2 = web->getGraphNode(unk138->getCurGraphIndex())
+				                       .getRailNode();
 				if (node2->mYaw != 0xffff)
 					unk15C = node2->mYaw * 0.01f;
 

@@ -398,8 +398,8 @@ bool TYoshi::appearFromEgg(const JGeometry::TVec3<f32>& pos, f32 yrot,
 
 	changeAnimation(0);
 
-	THitActor* fruit       = egg->getFruit();
-	TTakeActor* takeActor  = (TTakeActor*)fruit;
+	THitActor* fruit      = egg->getFruit();
+	TTakeActor* takeActor = (TTakeActor*)fruit;
 	if (mMario->getHeldObject() == fruit) {
 		takeActor->receiveMessage(mMario->getFloorHitActor(), HIT_MESSAGE_UNK8);
 		takeActor->mHolder  = nullptr;
@@ -1032,12 +1032,12 @@ void TYoshi::calcAnim()
 	}
 
 	u32 soundFlags = mMario->mSoundFlags;
-	f32 rate = mActor->getFrameCtrl(ANM_TYPE_BCK)->getRate();
-	MActor* actor = mActor;
+	f32 rate       = mActor->getFrameCtrl(ANM_TYPE_BCK)->getRate();
+	MActor* actor  = mActor;
 
-	mBodyAnmSound->animeLoop(
-	    &mTranslation, actor->getFrameCtrl(ANM_TYPE_BCK)->getFrame(), rate,
-	    soundFlags + 0x10000000, 4);
+	mBodyAnmSound->animeLoop(&mTranslation,
+	                         actor->getFrameCtrl(ANM_TYPE_BCK)->getFrame(),
+	                         rate, soundFlags + 0x10000000, 4);
 	mTongueAnmSound->animeLoop(&unkFC, unk5C.getFrame(), unk5C.getRate(),
 	                           soundFlags + 0x10000000, 4);
 }

@@ -22,7 +22,7 @@ TStageEnemyInfoTable::TStageEnemyInfoTable(const char* name)
 TStageEnemyInfo* TStageEnemyInfoTable::getMatchedInfo(s32 param_1)
 {
 	s32 weightSum = 0;
-	for (TStageEnemyInfo **it = getChildren().begin(),
+	for (TStageEnemyInfo **it  = getChildren().begin(),
 	                     **end = getChildren().end();
 	     it != end; ++it) {
 		TStageEnemyInfo* info = *it;
@@ -34,7 +34,7 @@ TStageEnemyInfo* TStageEnemyInfoTable::getMatchedInfo(s32 param_1)
 		return nullptr;
 
 	s32 x = rand() * (1.f / (RAND_MAX + 1)) * weightSum;
-	for (TStageEnemyInfo **it = getChildren().begin(),
+	for (TStageEnemyInfo **it  = getChildren().begin(),
 	                     **end = getChildren().end();
 	     it != end; ++it) {
 		TStageEnemyInfo* info = *it;

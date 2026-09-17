@@ -503,15 +503,12 @@ void TRope::constraintTail(const JGeometry::TVec3<f32>& param)
 		TRopePoint& prev = mPoints[i - 1];
 
 		bool same
-		    = (-JGeometry::TUtil<f32>::epsilon()
-		           <= prev.unkC.x - cur.unkC.x
+		    = (-JGeometry::TUtil<f32>::epsilon() <= prev.unkC.x - cur.unkC.x
 		       && prev.unkC.x - cur.unkC.x <= JGeometry::TUtil<f32>::epsilon())
-		      && (-JGeometry::TUtil<f32>::epsilon()
-		              <= prev.unkC.y - cur.unkC.y
+		      && (-JGeometry::TUtil<f32>::epsilon() <= prev.unkC.y - cur.unkC.y
 		          && prev.unkC.y - cur.unkC.y
 		                 <= JGeometry::TUtil<f32>::epsilon())
-		      && (-JGeometry::TUtil<f32>::epsilon()
-		              <= prev.unkC.z - cur.unkC.z
+		      && (-JGeometry::TUtil<f32>::epsilon() <= prev.unkC.z - cur.unkC.z
 		          && prev.unkC.z - cur.unkC.z
 		                 <= JGeometry::TUtil<f32>::epsilon());
 		if (!same) {

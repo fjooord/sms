@@ -52,10 +52,8 @@ void CLBCalc2DFPos(JGeometry::TVec2<f32>* out_ndc_pos, const f32 (*proj_mtx)[4],
 		return;
 	}
 
-	projPos.set(proj_mtx[0][0] * camSpacePos.x
-	                + proj_mtx[0][2] * camSpacePos.z,
-	            proj_mtx[1][1] * camSpacePos.y
-	                + proj_mtx[1][2] * camSpacePos.z,
+	projPos.set(proj_mtx[0][0] * camSpacePos.x + proj_mtx[0][2] * camSpacePos.z,
+	            proj_mtx[1][1] * camSpacePos.y + proj_mtx[1][2] * camSpacePos.z,
 	            projPos.z);
 	out_ndc_pos->set(projPos.x * perspectiveFactor,
 	                 projPos.y * perspectiveFactor);
@@ -380,10 +378,10 @@ void CLBCalcNearNinePos(JGeometry::TVec3<f32>* out_grid, S16Vec* out_euler,
 		// [ cosY, 0, sinY]   [1,   0,     0 ]
 		// [   0,  1,   0 ] * [0, cosX, -sinX]
 		// [-sinY, 0, cosY]   [0, sinX,  cosX]
-		f32 y = local_68.y;
+		f32 y      = local_68.y;
 		local_68.y = y * cosX - local_68.z * sinX;
 		local_68.z = y * sinX + local_68.z * cosX;
-		f32 x = local_68.x;
+		f32 x      = local_68.x;
 		local_68.x = x * cosY + local_68.z * sinY;
 		local_68.z = -x * sinY + local_68.z * cosY;
 
@@ -399,10 +397,10 @@ void CLBCalcNearNinePos(JGeometry::TVec3<f32>* out_grid, S16Vec* out_euler,
 		f32 sinY = JMASSin(out_euler->y);
 		f32 cosY = JMASCos(out_euler->y);
 
-		f32 y = local_74.y;
+		f32 y      = local_74.y;
 		local_74.y = y * cosX - local_74.z * sinX;
 		local_74.z = y * sinX + local_74.z * cosX;
-		f32 x = local_74.x;
+		f32 x      = local_74.x;
 		local_74.x = x * cosY + local_74.z * sinY;
 		local_74.z = -x * sinY + local_74.z * cosY;
 

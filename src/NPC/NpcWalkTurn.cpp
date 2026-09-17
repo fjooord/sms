@@ -33,7 +33,7 @@ void TBaseNPC::execWalk(bool param_1)
 		// TODO: vector math is borked
 		JGeometry::TVec3<f32> local_54 = unkF4.getPoint();
 		local_54 -= mPosition;
-		JGeometry::TVec3<f32> copy = local_54;
+		JGeometry::TVec3<f32> copy  = local_54;
 		JGeometry::TVec3<f32> copy2 = copy;
 		JGeometry::TVec3<f32> copy3;
 		copy3.set(copy2);
@@ -87,7 +87,7 @@ bool TBaseNPC::execUTurn()
 	JGeometry::TVec3<f32> local_24 = unkF4.getPoint();
 	local_24 -= mPosition;
 	const JGeometry::TVec3<f32>& local_30 = MsGetRotFromZaxis(local_24);
-	f32 targetYaw = local_30.y;
+	f32 targetYaw                         = local_30.y;
 	if (targetYaw == mRotation.y)
 		return true;
 
