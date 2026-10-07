@@ -5,7 +5,7 @@
 #include <Map/MapData.hpp>
 #include <Map/Map.hpp>
 #include <stdlib.h>
-#include <types.h>
+#include <dolphin/types.h>
 
 // rogue include
 #include <M3DUtil/InfectiousStrings.hpp>
@@ -686,7 +686,7 @@ void TGraphWeb::attachToGround()
 			pos.set(railNode->mPosition.x, railNode->mPosition.y,
 			        railNode->mPosition.z);
 			pos.y = gpMap->checkGround(pos, &checkData);
-			if (!checkData->checkFlag(BG_CHECK_FLAG_ILLEGAL))
+			if (!checkData->isIllegalData())
 				railNode->mPosition.y = pos.y;
 		}
 	}

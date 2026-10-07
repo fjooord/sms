@@ -45,7 +45,7 @@ void TWireBinder::bind(TLiveActor* actor)
 		actor->onLiveFlag(LIVE_FLAG_AIRBORNE);
 	}
 
-	actor->setLinearVelocity(unk_20 - actor->getPosition());
+	actor->setPositionDelta(unk_20 - actor->getPosition());
 }
 
 JGeometry::TVec3<f32>
@@ -116,4 +116,7 @@ bool TWireBinder::isEndWire(const JGeometry::TVec3<f32>& param_1,
 
 void TWireBinder::getStartRangePos(f32) { }
 
-void TWireBinder::getEndRangePos(f32) { }
+f32 TWireBinder::getEndRangePos(f32 direction)
+{
+	return 0.0f < direction ? 1.0f : 0.0f;
+}

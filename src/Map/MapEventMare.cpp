@@ -48,7 +48,8 @@ void TMareWallRock::appear()
 
 	unk10C[0]->setUp();
 	unk104->awake();
-	unk10C[0]->moveTrans(JGeometry::TVec3<f32>(0.0f, 0.0f, unkFC));
+	JGeometry::TVec3<f32> trans(0.0f, 0.0f, unkFC);
+	unk10C[0]->moveTrans(trans);
 	f32 rotY = unk128;
 
 	if (JPABaseEmitter* em = gpMarioParticleManager->emit(
@@ -130,7 +131,7 @@ void TMareWallRock::movement()
 		f32 z = transformInfo.mTranslate.z;
 		if (z > unkFC) {
 			unk10C[0]->remove();
-			unk104->kill();
+			unk104->sleep();
 			unk100 = mWaitTimeToAppear;
 			unkF4  = 3;
 			return;
@@ -197,15 +198,15 @@ void TMareWallRock::loadAfter()
 	unk104          = TMapObjBase::getBuildingJointObj(unkF8 + 1);
 	unk108          = unkF8;
 	J3DJoint* joint = unk104->getJoint();
-	const Vec& max  = joint->getMax();
 	const Vec& min  = joint->getMin();
+	const Vec& max  = joint->getMax();
 	mPosition.x     = (max.x + min.x) / 2.0f;
 	mPosition.y     = (max.y + min.y) / 2.0f;
 	mPosition.z     = (max.z + min.z) / 2.0f;
 	unkFC           = 100.0f + (max.z - min.z);
 	TMapObjBase::moveJoint(unk104->mJoint, 0.0f, 0.0f, unkFC);
-	unk104->kill();
-	initHitActor(0x4000022C, 1, 0, 0.0f, 0.0f, 0.0f, 0.0f);
+	unk104->sleep();
+	initHitActor(ACTOR_TYPE_MARE_WALL_ROCK, 1, 0, 0.0f, 0.0f, 0.0f, 0.0f);
 	initEffect();
 }
 
@@ -604,8 +605,9 @@ u32 TMareEventBumpyWall::touchWater(THitActor*)
 void TMareEventBumpyWall::bumpDownZ()
 {
 	f32 z = TMapObjBase::getJointTransZ(unk13C);
-	JGeometry::TVec3<f32> trans(z, 0.0f, 0.0f);
-	if (z > -unk144) {
+	JGeometry::TVec3<f32> trans(0.0f, 0.0f, z);
+	f32 limit = -unk144;
+	if (z > limit) {
 		if (!TMapObjBase::isDemo()) {
 			z -= unk140;
 			SMSRumbleMgr->start(0x13, -1, (f32*)nullptr);
@@ -619,8 +621,8 @@ void TMareEventBumpyWall::bumpDownZ()
 		unk14C->moveTrans(trans);
 		return;
 	}
-	trans.z = -unk144;
-	TMapObjBase::setJointTransZ(unk13C, -unk144);
+	trans.z = limit;
+	TMapObjBase::setJointTransZ(unk13C, limit);
 	unk14C->remove();
 	unk148->setUpTrans(trans);
 	SMSRumbleMgr->stop(0x13);
@@ -630,7 +632,7 @@ void TMareEventBumpyWall::bumpDownZ()
 void TMareEventBumpyWall::bumpUpZ()
 {
 	f32 z = TMapObjBase::getJointTransZ(unk13C);
-	JGeometry::TVec3<f32> trans(z, 0.0f, 0.0f);
+	JGeometry::TVec3<f32> trans(0.0f, 0.0f, z);
 	if (z < unk144) {
 		if (!TMapObjBase::isDemo()) {
 			z += unk140;
@@ -657,7 +659,8 @@ void TMareEventBumpyWall::bumpDownX()
 {
 	f32 x = TMapObjBase::getJointTransX(unk13C);
 	JGeometry::TVec3<f32> trans(x, 0.0f, 0.0f);
-	if (x > -unk144) {
+	f32 limit = -unk144;
+	if (x > limit) {
 		if (!TMapObjBase::isDemo()) {
 			x -= unk140;
 			SMSRumbleMgr->start(0x13, -1, (f32*)nullptr);
@@ -671,8 +674,8 @@ void TMareEventBumpyWall::bumpDownX()
 		unk14C->moveTrans(trans);
 		return;
 	}
-	trans.x = -unk144;
-	TMapObjBase::setJointTransX(unk13C, -unk144);
+	trans.x = limit;
+	TMapObjBase::setJointTransX(unk13C, limit);
 	unk14C->remove();
 	unk148->setUpTrans(trans);
 	SMSRumbleMgr->stop(0x13);

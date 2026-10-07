@@ -108,9 +108,9 @@ void TEMario::loadAfter()
 void TEMario::init(TLiveManager* manager)
 {
 	if (!manager) {
-		if (TObjChara* chara = (TObjChara*)unk3C) {
-			mMActorKeeper                    = new TMActorKeeper(nullptr, 1);
-			mMActorKeeper->mModelLoaderFlags = 0x11300000;
+		if (TObjChara* chara = (TObjChara*)mCharacter) {
+			mMActorKeeper = new TMActorKeeper(nullptr, 1);
+			mMActorKeeper->setModelLoaderFlags(0x11300000);
 			mMActor = mMActorKeeper->createMActorFromDefaultBmd(
 			    chara->getFolder(), 0);
 			for (int i = 0;
@@ -133,16 +133,49 @@ void TEMario::init(TLiveManager* manager)
 		                         "H_kagemario_dummy");
 	}
 
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	offLiveFlag(LIVE_FLAG_UNK400);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	offLiveFlag(LIVE_FLAG_FORCE_SHADOW);
 
 	if (!mAnmSound)
 		initAnmSound();
 
-	initHitActor(0x8000002, 0x4, 0xe5000000, 70.0f, 45.0f, 60.0f, 40.0f);
+	initHitActor(ACTOR_TYPE_E_MARIO, 0x4,
+	             HIT_CATEGORY_PLAYER | HIT_CATEGORY_MAP_OBJECT
+	                 | HIT_CATEGORY_ITEM | HIT_CATEGORY_NPC
+	                 | HIT_CATEGORY_WATER,
+	             70.0f, 45.0f, 60.0f, 40.0f);
 
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	onLiveFlag(LIVE_FLAG_UNK10);
+}
+
+void TEMario::checkCollision()
+{
+	for (s32 i = 0; i < mColCount; ++i) {
+		switch (mCollisions[i]->mActorType) {
+		case ACTOR_TYPE_MARIO: {
+			if (JGeometry::TVec3<f32>(mPosition - mCollisions[i]->getPosition())
+			        .length()
+			    < mEnemyMario->mAttackRange) {
+				mCollisions[i]->receiveMessage(this, HIT_MESSAGE_ATTACK);
+			}
+		} break;
+
+		case ACTOR_TYPE_GESO_SURF_BOARD: {
+			if (!mEnemyMario->checkStatusType(MARIO_STATUS_FLAG_UNK10000)) {
+				if (JGeometry::TVec3<f32>(mCollisions[i]->getPosition()
+				                          - mPosition)
+				        .length()
+				    < (mCollisions[i]->getAttackRadius()
+				       + mEnemyMario->getDamageRadius())) {
+					mEnemyMario->changePlayerStatus(MARIO_STATUS_SURF, 0,
+					                                false);
+					mEnemyMario->emitGetEffect();
+				}
+			}
+		} break;
+		}
+	}
 }
 
 BOOL TEMario::receiveMessage(THitActor* sender, u32 message)
@@ -154,7 +187,7 @@ BOOL TEMario::receiveMessage(THitActor* sender, u32 message)
 		return TRUE;
 	} else if (message == HIT_MESSAGE_TRAMPLE) {
 		return mEnemyMario->thinkTrample();
-	} else if (sender->getActorType() == 0x40000246) {
+	} else if (sender->getActorType() == ACTOR_TYPE_MONTE_GOAL_FLAG) {
 		mEnemyMario->reachGoal();
 	}
 	return FALSE;
@@ -165,6 +198,8 @@ void TEMario::kill()
 	if (SMS_isMultiPlayerMap())
 		gpCamera->removeMultiPlayer(&mPosition);
 }
+
+void TEMario::execKill() { }
 
 bool TEMario::isGoal()
 {
@@ -195,35 +230,8 @@ void TEMario::perform(u32 cue, JDrama::TGraphics* graphics)
 		return;
 	}
 
-	if (!(cue & CUE_MOVE)) {
-		return;
-	}
-
-	if (mEnemyMario->canControl() == 0) {
-		return;
-	}
-
-	for (s32 i = 0; i < mColCount; ++i) {
-		switch (mCollisions[i]->mActorType) {
-		case 0x80000001: {
-			if (mPosition.distance(mCollisions[i]->getPosition())
-			    < mEnemyMario->mAttackRange) {
-				mCollisions[i]->receiveMessage(this, HIT_MESSAGE_ATTACK);
-			}
-		} break;
-
-		case 0x400000bc: {
-			if (!mEnemyMario->checkStatusType(0x10000)) {
-
-				if (mCollisions[i]->getPosition().distance(mPosition)
-				    < (mCollisions[i]->getAttackRadius()
-				       + mEnemyMario->getDamageRadius())) {
-					mEnemyMario->changePlayerStatus(0x810446, 0, false);
-					mEnemyMario->emitGetEffect();
-				}
-			}
-		} break;
-		}
+	if ((cue & CUE_MOVE) && mEnemyMario->canControl()) {
+		checkCollision();
 	}
 
 	mEnemyMario->perform(cue, graphics);

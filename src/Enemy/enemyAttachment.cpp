@@ -68,7 +68,7 @@ void TEnemyAttachment::recoverScale()
 void TEnemyAttachment::bind()
 {
 	JGeometry::TVec3<f32> local_1C = mPosition;
-	local_1C += mLinearVelocity;
+	local_1C += mPositionDelta;
 	local_1C += mVelocity;
 	recoverScale();
 	mVelocity.y -= getNowGravity();
@@ -94,20 +94,20 @@ void TEnemyAttachment::bind()
 		behaveToHitWall(local_18);
 	}
 
-	mPosition       = local_1C;
-	mLinearVelocity = local_1C - mPosition;
+	mPosition      = local_1C;
+	mPositionDelta = local_1C - mPosition;
 
 	setBehavior();
 	forceKill();
 
-	mPosition += mLinearVelocity;
+	mPosition += mPositionDelta;
 }
 
 void TEnemyAttachment::rebirth()
 {
 	unk150 = 0;
 	unk158 = 0;
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	mVelocity.y = 0.0f;
 }
 
@@ -115,7 +115,7 @@ void TEnemyAttachment::kill()
 {
 	unk150 = 0;
 	unk158 = 0;
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TEnemyAttachment::set()
@@ -139,7 +139,7 @@ void TEnemyAttachment::moveObject()
 void TEnemyAttachment::sendMessage()
 {
 	for (int i = 0; i < mColCount; ++i) {
-		if (mCollisions[i]->isActorType(0x80000001)) {
+		if (mCollisions[i]->isActorType(ACTOR_TYPE_MARIO)) {
 			SMS_SendMessageToMario(this, HIT_MESSAGE_ATTACK);
 			continue;
 		}
@@ -160,7 +160,7 @@ void TEnemyAttachment::calcRootMatrix()
 
 void TEnemyAttachment::perform(u32 cue, JDrama::TGraphics* graphics)
 {
-	if (unk150 == nullptr) {
+	if (unk150 == 0) {
 		if (cue & CUE_CALC_ANIM)
 			behaveToHost();
 		return;
@@ -220,10 +220,7 @@ void TEnemyPolluteModelManager::generatePolluteModel(
 {
 	TEnemyPolluteModel* model = unk18[unk10];
 
-	const TBGCheckData* check;
-	gpMap->checkGround(param_1, &check);
-	if (!check->checkFlag(BG_CHECK_FLAG_ILLEGAL) && !check->isWaterSurface())
-		model->generate(param_1, param_2);
+	model->generate(param_1, param_2);
 
 	++unk10;
 	if (unk10 >= unk14)
@@ -262,6 +259,11 @@ void TEnemyPolluteModel::perform(u32 cue, JDrama::TGraphics* graphics)
 void TEnemyPolluteModel::generate(JGeometry::TVec3<f32>& param_1,
                                   JGeometry::TVec3<f32>& param_2)
 {
+	const TBGCheckData* check;
+	gpMap->checkGround(param_1, &check);
+	if (check->isIllegalData() || check->isWaterSurface())
+		return;
+
 	unk44 = param_1;
 	unk50 = param_2;
 

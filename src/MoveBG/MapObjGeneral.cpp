@@ -39,9 +39,9 @@ bool TMapObjGeneral::isPollutedGround(const JGeometry::TVec3<f32>& v) const
 
 inline f32 distToMario(const JGeometry::TVec3<f32>& v)
 {
-	f32 l = (v.x - gpMarioPos->x) * (v.x - gpMarioPos->x)
-	        + (v.y - gpMarioPos->y) * (v.y - gpMarioPos->y)
-	        + (v.z - gpMarioPos->z) * (v.z - gpMarioPos->z);
+	f32 l = (v.x - SMS_GetMarioPos().x) * (v.x - SMS_GetMarioPos().x)
+	        + (v.y - SMS_GetMarioPos().y) * (v.y - SMS_GetMarioPos().y)
+	        + (v.z - SMS_GetMarioPos().z) * (v.z - SMS_GetMarioPos().z);
 	return JGeometry::TUtil<f32>::sqrt(l);
 }
 
@@ -50,15 +50,15 @@ void TMapObjGeneral::waitingToAppear()
 	if (isStateTimerEngaged())
 		return;
 
-	if (isActorType(0x4000005a)) {
+	if (isActorType(ACTOR_TYPE_WOOD_BARREL)) {
 		f32 damageRadius = getDamageRadius();
-		if (SMS_GetMarioDamageRadius() + damageRadius + 100.0f
-		    > distToMario(mInitialPosition))
+		if (distToMario(mInitialPosition)
+		    > SMS_GetMarioDamageRadius() + damageRadius + 100.0f)
 			appear();
 	} else {
 		f32 damageRadius = getDamageRadius();
-		if (SMS_GetMarioDamageRadius() + damageRadius
-		    > distToMario(mInitialPosition))
+		if (distToMario(mInitialPosition)
+		    > SMS_GetMarioDamageRadius() + damageRadius)
 			appear();
 	}
 }
@@ -95,11 +95,11 @@ void TMapObjGeneral::put()
 	s32 preservedTimeTilAppear = getStateTimer();
 	makeObjAppeared();
 	mStateTimer = preservedTimeTilAppear;
-	mPosition.x = JMASSin(*gpMarioAngleY)
+	mPosition.x = JMASSin(SMS_GetMarioAngleY())
 	                  * (getDamageRadius() + SMS_GetMarioDamageRadius() + 10.0f)
 	              + SMS_GetMarioPos().x;
 	mPosition.y = SMS_GetMarioPos().y;
-	mPosition.z = JMASCos(*gpMarioAngleY)
+	mPosition.z = JMASCos(SMS_GetMarioAngleY())
 	                  * (getDamageRadius() + SMS_GetMarioDamageRadius() + 10.0f)
 	              + SMS_GetMarioPos().z;
 	offLiveFlag(LIVE_FLAG_UNK10);
@@ -108,29 +108,32 @@ void TMapObjGeneral::put()
 
 void TMapObjGeneral::thrown()
 {
-	mPosition.set(gpMarioPos->x, gpMarioPos->y, gpMarioPos->z);
-	mRotation.set(*gpMarioAngleX, *gpMarioAngleY, *gpMarioAngleZ);
+	mPosition.set(SMS_GetMarioPos().x, SMS_GetMarioPos().y,
+	              SMS_GetMarioPos().z);
+	mRotation.set(SMS_GetMarioAngleX(), SMS_GetMarioAngleY(),
+	              SMS_GetMarioAngleZ());
 
 	mGroundHeight = gpMap->checkGround(mPosition, &mGroundPlane);
 	unk138        = 0;
 	mHolder       = nullptr;
 
-	mVelocity.set(*gpMarioThrowPower
-	                      * (JMASSin((s32)*gpMarioAngleY)
-	                         * mMapObjData->mPhysical->unk4->unk2C)
-	                  + (mNormalThrowSpeedRate * *gpMarioSpeedX),
-	              mMapObjData->mPhysical->unk4->unk30,
-	              *gpMarioThrowPower
-	                      * (JMASCos((s32)*gpMarioAngleY)
-	                         * mMapObjData->mPhysical->unk4->unk2C)
-	                  + (mNormalThrowSpeedRate * *gpMarioSpeedZ));
+	f32 power = SMS_GetMarioThrowPower();
+	mVelocity.set(power
+	                      * (JMASSin(SMS_GetMarioAngleY())
+	                         * getMapObjData()->mPhysical->unk4->unk2C)
+	                  + mNormalThrowSpeedRate * SMS_GetMarioSpeedX(),
+	              getMapObjData()->mPhysical->unk4->unk30,
+	              power
+	                      * (JMASCos(SMS_GetMarioAngleY())
+	                         * getMapObjData()->mPhysical->unk4->unk2C)
+	                  + mNormalThrowSpeedRate * SMS_GetMarioSpeedZ());
 
 	offLiveFlag(LIVE_FLAG_UNK10);
 	JGeometry::TVec3<f32> vel = mVelocity;
 	mPosition.add(vel);
 	onLiveFlag(LIVE_FLAG_AIRBORNE);
 	removeMapCollision();
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	startAnim(5);
 	startSound(5);
 	mState = STATE_NORMAL;
@@ -160,12 +163,12 @@ void TMapObjGeneral::recovering()
 	if (hasModelOrAnimData(6)) {
 		J3DModel* model = getModel();
 		MtxPtr mat      = model->getAnmMtx(0);
-		f32 fVar1       = mat[3][1] - unk144;
+		f32 fVar1       = mat[1][3] - unk144;
 		mDamageHeight += fVar1;
 		calcEntryRadius();
 		if (mHeldObject)
 			mHeldObject->mPosition.y += fVar1;
-		unk144 = mat[3][1];
+		unk144 = mat[1][3];
 		if (!animIsFinished())
 			return;
 	} else if (mPosition.y < unk144) {
@@ -183,7 +186,7 @@ void TMapObjGeneral::sinking()
 	mPosition.y -= mMapObjData->mSink->unk0;
 
 	for (int i = 0; i < getColNum(); ++i) {
-		if (getCollision(i)->checkActorType(0x1000000)) {
+		if (getCollision(i)->isHitCategory(HIT_CATEGORY_WATER)) {
 			recover();
 			return;
 		}
@@ -224,7 +227,7 @@ void TMapObjGeneral::appearing()
 		mScaling.x += mNormalAppearingScaleUp;
 		mScaling.y += mNormalAppearingScaleUp;
 		mScaling.z += mNormalAppearingScaleUp;
-		if (mScaling.x < mInitialScaling.x)
+		if (mInitialScaling.x > mScaling.x)
 			return;
 
 		mScaling.set(mInitialScaling);
@@ -253,7 +256,7 @@ void TMapObjGeneral::makeObjBuried()
 {
 	unk144 = mPosition.y;
 	mPosition.y -= mMapObjData->mHit->unkC[2].unkC;
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	removeMapCollision();
 	mMActor = nullptr;
 	mState  = STATE_BURIED;
@@ -296,7 +299,7 @@ void TMapObjGeneral::recover()
 	startSound(8);
 	mDamageHeight = 0.0f;
 	calcEntryRadius();
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	if (hasModelOrAnimData(6)) {
 		f32 tmp     = mPosition.y;
 		mPosition.y = unk144;
@@ -307,9 +310,9 @@ void TMapObjGeneral::recover()
 
 void TMapObjGeneral::hold(TTakeActor* actor)
 {
-	if (mMapCollisionManager && mMapCollisionManager->unk8)
-		mMapCollisionManager->unk8->remove();
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	if (mMapCollisionManager)
+		mMapCollisionManager->removeActiveCollision();
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	mHolder = actor;
 	mState  = STATE_HOLDING;
 }
@@ -317,7 +320,8 @@ void TMapObjGeneral::hold(TTakeActor* actor)
 void TMapObjGeneral::ensureTakeSituation()
 {
 	TMapObjBase::ensureTakeSituation();
-	if (isState(STATE_HOLDING) && mHolder == nullptr) {
+	BOOL holding = isState(STATE_HOLDING);
+	if (holding && mHolder == nullptr) {
 		mState = STATE_NORMAL;
 		offLiveFlag(LIVE_FLAG_UNK10);
 	}
@@ -325,7 +329,7 @@ void TMapObjGeneral::ensureTakeSituation()
 
 void TMapObjGeneral::kill()
 {
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	removeMapCollision();
 	onLiveFlag(LIVE_FLAG_UNK10 | LIVE_FLAG_UNK8);
 	mStateTimer = -1;
@@ -345,7 +349,7 @@ void TMapObjGeneral::appear()
 		mScaling.z = mNormalAppearingScaleUp;
 	}
 
-	if (!isActorType(0x20000010)
+	if (!isActorType(ACTOR_TYPE_COIN_BLUE)
 	    || !TFlagManager::smInstance->getBlueCoinFlag(
 	        gpMarDirector->getCurrentMap(), mEventId))
 		startSound(1);
@@ -471,7 +475,7 @@ void TMapObjGeneral::checkGroundCollision(JGeometry::TVec3<f32>* param_1)
 
 void TMapObjGeneral::calcVelocity()
 {
-	if (checkLiveFlag2(LIVE_FLAG_AIRBORNE)) {
+	if (isAirborne()) {
 		f32 dVar5 = getGravityY();
 		mVelocity.y -= dVar5;
 
@@ -507,7 +511,7 @@ void TMapObjGeneral::bind()
 
 	calcVelocity();
 	JGeometry::TVec3<f32> vec = getPosition();
-	vec.add(mLinearVelocity);
+	vec.add(mPositionDelta);
 	vec.add(mVelocity);
 	checkGroundCollision(&vec);
 	if (checkMapObjFlag(MAP_OBJ_FLAG_ENABLE_WALL_COLLISION))
@@ -524,7 +528,7 @@ void TMapObjGeneral::bind()
 		return;
 	}
 
-	if (!checkLiveFlag2(LIVE_FLAG_AIRBORNE)) {
+	if (!isAirborne()) {
 		JGeometry::TVec3<f32> vel     = mVelocity;
 		JGeometry::TVec3<f32> velCopy = vel;
 		if (velCopy.x == 0.0f) {
@@ -538,14 +542,15 @@ void TMapObjGeneral::bind()
 		}
 	}
 
-	mLinearVelocity = vec - mLinearVelocity;
+	mPositionDelta = vec - mPosition;
 }
 
 void TMapObjGeneral::control()
 {
 	TMapObjBase::control();
-	if (checkMapObjFlag(MAP_OBJ_FLAG_CAN_SINK) && isState(STATE_NORMAL)
-	    && !isAirborne() && isPollutedGround(mPosition))
+	BOOL canSink = checkMapObjFlag(MAP_OBJ_FLAG_CAN_SINK);
+	if (canSink && isState(STATE_NORMAL) && !isAirborne()
+	    && isPollutedGround(mPosition))
 		sink();
 
 	work();
@@ -559,24 +564,23 @@ void TMapObjGeneral::calcRootMatrix()
 		if (mMapObjData->mHold) {
 			TMapObjHoldData* hold = mMapObjData->mHold;
 
-			MtxPtr src = getTakingMtx();
+			MtxPtr src = mHolder->getTakingMtx();
 			MTXCopy(src, hold->unkC->getBaseTRMtx());
 			hold->unkC->calc();
 
 			MtxPtr src2 = hold->unk10;
 			MTXCopy(src2, model->getBaseTRMtx());
-			mPosition.set(src2[3][0], src2[3][1], src2[3][2]);
+			mPosition.set(src2[0][3], src2[1][3], src2[2][3]);
 		} else {
-			MtxPtr src = getTakingMtx();
+			MtxPtr src = mHolder->getTakingMtx();
 			MTXCopy(src, checkMapObjFlag(MAP_OBJ_FLAG_UNK100)
 			                 ? model->getAnmMtx(0)
 			                 : model->getBaseTRMtx());
-			mPosition.set(src[3][0], src[3][1], src[3][2]);
+			mPosition.set(src[0][3], src[1][3], src[2][3]);
 		}
 	} else {
-		JGeometry::TVec3<f32> pos(mPosition.x, mPosition.y - mYOffset,
-		                          mPosition.z);
-		MsMtxSetXYZRPH(model->getBaseTRMtx(), pos.x, pos.y, pos.z, mRotation.x,
+		MsMtxSetXYZRPH(model->getBaseTRMtx(), mPosition.x,
+		               mPosition.y - mYOffset, mPosition.z, mRotation.x,
 		               mRotation.y, mRotation.z);
 	}
 	model->setBaseScale(mScaling);
@@ -613,7 +617,7 @@ BOOL TMapObjGeneral::receiveMessage(THitActor* sender, u32 message)
 		return true;
 	}
 
-	if (message == HIT_MESSAGE_TAKE && isActorType(0x10000025)
+	if (message == HIT_MESSAGE_TAKE && isActorType(ACTOR_TYPE_HAUNT_LEG)
 	    && (isState(STATE_APPEARING) || isState(STATE_NORMAL))) {
 		hold((TTakeActor*)sender);
 		return 1;
@@ -636,7 +640,7 @@ BOOL TMapObjGeneral::receiveMessage(THitActor* sender, u32 message)
 		return true;
 	}
 
-	if (isActorType(0x80000001)
+	if (isActorType(ACTOR_TYPE_MARIO)
 	    && (message == HIT_MESSAGE_TRAMPLE
 	        || message == HIT_MESSAGE_HIP_DROP)) {
 		receiveMessageFromPlayer();

@@ -51,11 +51,11 @@ BOOL TMario::isThrowStart()
 {
 	if (mHeldObject != nullptr && ((mInput & 0x2000) ? true : false)) {
 
-		if (mHeldObject->checkActorType(0x10000000))
+		if (mHeldObject->isHitCategory(HIT_CATEGORY_ENEMY))
 			return changePlayerStatus(MARIO_STATUS_PITCHING, 0, false);
 
 		switch (mHeldObject->getActorType()) {
-		case 0x80000001:
+		case ACTOR_TYPE_MARIO:
 			return changePlayerStatus(MARIO_STATUS_PITCHING, 0, false);
 
 		default:
@@ -111,7 +111,12 @@ bool TMario::isRunningInWater()
 	return false;
 }
 
-void TMario::getRunningInWaterBrake() { }
+f32 TMario::getRunningInWaterBrake()
+{
+	return 1.0f
+	       - (mFloorPosition.z - mPosition.y) / mRunParams.mSwimDepth.get()
+	             * (1.0f - mRunParams.mInWaterBrake.get());
+}
 
 BOOL TMario::doRunningAnimation()
 {
@@ -139,10 +144,7 @@ BOOL TMario::doRunningAnimation()
 				rate = sp * mRunParams.mRunAnmSpeedMult.get()
 				       + mRunParams.mRunAnmSpeedBase.get();
 				if (isRunningInWater()) {
-					f32 tmp = (mFloorPosition.z - mPosition.y)
-					          / mRunParams.mSwimDepth.get();
-					rate *= (1.0f
-					         - tmp * (1.0f - mRunParams.mInWaterBrake.get()))
+					rate *= getRunningInWaterBrake()
 					        * mRunParams.mInWaterAnmBrake.get();
 				}
 				setAnimation(ANIM_RUN2, rate);
@@ -476,8 +478,8 @@ void TMario::doStopping() { }
 void TMario::doRunning()
 {
 	f32 sp = mIntendedMag < mRunParams.mMaxSpeed.get()
-	             ? mRunParams.mMaxSpeed.get()
-	             : mIntendedMag;
+	             ? mIntendedMag
+	             : mRunParams.mMaxSpeed.get();
 
 	if (onYoshi())
 		sp *= mYoshiParams.mRunYoshiMult.get();
@@ -517,10 +519,7 @@ void TMario::doRunning()
 		rotSp = mRunParams.mDashRotSp.get();
 
 	if (isRunningInWater()) {
-		mForwardVel *= -(
-		    (((mFloorPosition.z - mPosition.y) / mRunParams.mSwimDepth.get())
-		     * (1.0f - mRunParams.mInWaterBrake.get()))
-		    - 1.0f);
+		mForwardVel *= getRunningInWaterBrake();
 	}
 
 	mFaceAngle.y
@@ -975,7 +974,7 @@ BOOL TMario::surfing()
 
 		if ((wallToFace < -maxAngle || maxAngle < wallToFace)
 		    && mForwardVel > minSpeed) {
-			decHP(mDeParams.mHpMax.get());
+			decHP(mDeParams.mHPMax.get());
 			BOOL ret = changePlayerStatus(MARIO_STATUS_JUMP_BACK_DOWN, 0, true);
 			mForwardVel = 0.8f * -mForwardVel;
 			mVel.y      = 50.0f;
@@ -1135,8 +1134,8 @@ void TMario::slippingBasic(int statusOnStop, int statusOnFall, int slipAnim)
 				unk9E  = (wallAng - (s16)(unk9E - wallAng)) + 0x8000;
 				mVel.x = mSlideVelX = newMag * JMASSin(unk9E);
 				mVel.z = mSlideVelZ = newMag * JMASCos(unk9E);
-				u32 sndId
-				    = gpMSound->getWallSound(mWallPlane->unk6, mForwardVel);
+				u32 sndId = gpMSound->getWallSound(mWallPlane->mSoundMaterial,
+				                                   mForwardVel);
 				SMSGetMSound()->startSoundActor(sndId, &mPosition, 0, nullptr,
 				                                0, 4);
 			}
@@ -1263,10 +1262,7 @@ BOOL TMario::oilRun()
 	}
 
 	f32 tmp = mDirtyParams.mPolSizeRun.get();
-	f32 z   = mPosition.z;
-	f32 y   = mPosition.y;
-	f32 x   = mPosition.x;
-	gpPollution->stamp(1, x, y, z, tmp);
+	gpPollution->pollute(mPosition.x, mPosition.y, mPosition.z, tmp);
 
 	{
 		f32 rotSp = mDirtyParams.mSlipRotate.get();
@@ -1336,10 +1332,7 @@ BOOL TMario::oilSlip()
 	}
 
 	f32 tmp = mDirtyParams.mPolSizeSlip.get();
-	f32 z   = mPosition.z;
-	f32 y   = mPosition.y;
-	f32 x   = mPosition.x;
-	gpPollution->stamp(1, x, y, z, tmp);
+	gpPollution->pollute(mPosition.x, mPosition.y, mPosition.z, tmp);
 	SMSGetMSound()->startSoundActor(MSD_SE_MA_SLIP_POLLUT_CP, &mPosition, 0,
 	                                nullptr, 0, 4);
 
@@ -1374,11 +1367,8 @@ BOOL TMario::oilSlope()
 		mOilBrake   = 0.0f;
 		changePlayerStatus(MARIO_STATUS_CATCH, 0, false);
 	}
-	f32 tmp = mDirtyParams.mPolSizeSlip.get();
-	f32 z   = mPosition.z;
-	f32 y   = mPosition.y;
-	f32 x   = mPosition.x;
-	gpPollution->stamp(1, x, y, z, tmp);
+	gpPollution->pollute(mPosition.x, mPosition.y, mPosition.z,
+	                     mDirtyParams.mPolSizeSlip.get());
 	return slipBackCommon(MARIO_STATUS_CATCH_LOST, MARIO_STATUS_LANDING, 0x89);
 }
 

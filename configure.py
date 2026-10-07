@@ -150,6 +150,16 @@ config.objdiff_tag = "v3.8.1"
 config.sjiswrap_tag = "v1.2.2"
 config.wibo_tag = "1.1.0"
 
+middleware_libs = [
+    "dolphin",
+    "JSystem",
+    "THPPlayer",
+    "PowerPC_EABI_Support",
+    "TRK_MINNOW_DOLPHIN",
+    "OdemuExi2",
+]
+msl_include = "libs/PowerPC_EABI_Support/include/PowerPC_EABI_Support/Msl"
+
 # Project
 config.config_path = Path("config") / config.version / "config.yml"
 config.check_sha_path = Path("config") / config.version / "build.sha1"
@@ -157,8 +167,9 @@ config.asflags = [
     "-mgekko",
     "--strip-local-absolute",
     "-I include",
-    "-I include/PowerPC_EABI_Support/Msl/MSL_C/MSL_Common",
-    "-I include/PowerPC_EABI_Support/Msl/MSL_C++/MSL_Common",
+    *[f"-I libs/{lib}/include" for lib in middleware_libs],
+    f"-I {msl_include}/MSL_C/MSL_Common",
+    f"-I {msl_include}/MSL_C++/MSL_Common",
     f"-I build/{config.version}/include",
     f"--defsym BUILD_VERSION={version_num}",
 ]
@@ -196,10 +207,13 @@ cflags_base_base = [
     "-multibyte",  # For Wii compilers, replace with `-enc SJIS`
     "-cwd source",
     "-i include",
-    "-i include/PowerPC_EABI_Support/Msl/MSL_C/MSL_Common",
-    "-i include/PowerPC_EABI_Support/Msl/MSL_C++/MSL_Common",
+    *[f"-i libs/{lib}/include" for lib in middleware_libs],
+    f"-i {msl_include}/MSL_C/MSL_Common",
+    f"-i {msl_include}/MSL_C++/MSL_Common",
     f"-i build/{config.version}/include",
     f"-DBUILD_VERSION={version_num}",
+    "-Dnullptr=0",
+    "-Dalignof=__builtin_align",
     f"-DVERSION_{config.version}",
 ]
 
@@ -639,7 +653,7 @@ config.libs = [
             Object(Matching, "TRK_MINNOW_DOLPHIN/debugger/embedded/MetroTRK/Processor/ppc/Generic/flush_cache.c"),
             Object(Matching, "TRK_MINNOW_DOLPHIN/debugger/embedded/MetroTRK/Portable/mem_TRK.c"),
             Object(Matching, "TRK_MINNOW_DOLPHIN/debugger/embedded/MetroTRK/Processor/ppc/Generic/targimpl.c"),
-            Object(Matching, "TRK_MINNOW_DOLPHIN/__exception.s"),
+            Object(MatchingFor("GMSJ01"), "TRK_MINNOW_DOLPHIN/__exception.s"),
             Object(Matching, "TRK_MINNOW_DOLPHIN/debugger/embedded/MetroTRK/Os/dolphin/dolphin_trk.c"),
             Object(Matching, "TRK_MINNOW_DOLPHIN/debugger/embedded/MetroTRK/Processor/ppc/Generic/mpc_7xx_603e.c"),
             Object(Matching, "TRK_MINNOW_DOLPHIN/debugger/embedded/MetroTRK/Portable/main_TRK.c"),
@@ -860,7 +874,7 @@ config.libs = [
             Object(Matching, "System/ParamInst.cpp"),
             PCHObject(NonMatching, "System/PerformList.cpp"),
             PCHObject(NonMatching, "System/RenderModeObj.cpp"),
-            PCHObject(NonMatching, "System/SnapTimeObj.cpp"),
+            PCHObject(Matching, "System/SnapTimeObj.cpp"),
             PCHObject(NonMatching, "System/TalkCursor.cpp"),
             Object(Matching, "System/TexCache.cpp"),
             PCHObject(Matching, "System/ZBufferCatch.cpp"),
@@ -872,14 +886,14 @@ config.libs = [
             Object(Matching, "System/Resolution.cpp"),
             PCHObject(Matching, "System/PositionHolder.cpp"),
             Object(Matching, "System/ProcessMeter.cpp"),
-            PCHObject(NonMatching, "System/TimeRec.cpp"),
+            PCHObject(Matching, "System/TimeRec.cpp"),
             Object(NonMatching, "System/DrawSyncManager.cpp"),
             PCHObject(Matching, "System/THPRender.cpp"),
             PCHObject(NonMatching, "System/MarNameRefGen_BossEnemy.cpp"),
             PCHObject(NonMatching, "System/MarNameRefGen_Enemy.cpp"),
             PCHObject(NonMatching, "System/MarNameRefGen_Map.cpp"),
             PCHObject(NonMatching, "System/MarNameRefGen_MapObj.cpp"),
-            PCHObject(NonMatching, "System/MarNameRefGen_NPC.cpp"),
+            PCHObject(Matching, "System/MarNameRefGen_NPC.cpp"),
             PCHObject(NonMatching, "System/CardManager.cpp"),
             PCHObject(NonMatching, "System/MarDirectorLoadResource.cpp"),
             PCHObject(NonMatching, "System/MovieDirector.cpp"),
@@ -897,12 +911,12 @@ config.libs = [
         "objects": [
             PCHObject(NonMatching, "Strategic/liveactor.cpp"),
             PCHObject(NonMatching, "Strategic/liveinterp.cpp"),
-            PCHObject(NonMatching, "Strategic/livemanager.cpp"),
+            PCHObject(Matching, "Strategic/livemanager.cpp"),
             Object(NonMatching, "Strategic/ObjHitCheck.cpp"),
             PCHObject(NonMatching, "Strategic/objmanager.cpp"),
             PCHObject(NonMatching, "Strategic/ObjModel.cpp"),
             Object(NonMatching, "Strategic/spcinterp.cpp"),
-            PCHObject(NonMatching, "Strategic/Strategy.cpp"),
+            PCHObject(Matching, "Strategic/Strategy.cpp"),
             PCHObject(NonMatching, "Strategic/question.cpp"),
             PCHObject(Matching, "Strategic/smplcharacter.cpp"),
             PCHObject(NonMatching, "Strategic/HitActor.cpp"),
@@ -1027,7 +1041,7 @@ config.libs = [
             PCHObject(NonMatching, "MoveBG/MapObjPlane.cpp"),
             PCHObject(NonMatching, "MoveBG/MapObjCloud.cpp"),
             PCHObject(NonMatching, "MoveBG/MapObjBall.cpp"),
-            PCHObject(Matching, "MoveBG/MapObjAirport.cpp"),
+            PCHObject(MatchingFor("GMSJ01"), "MoveBG/MapObjAirport.cpp"),
             PCHObject(NonMatching, "MoveBG/MapObjDolpic.cpp"),
             PCHObject(NonMatching, "MoveBG/MapObjPollution.cpp"),
             PCHObject(NonMatching, "MoveBG/MapObjGrass.cpp"),
@@ -1111,7 +1125,7 @@ config.libs = [
             PCHObject(NonMatching, "GC2D/PauseMenu2.cpp"),
             Object(NonMatching, "GC2D/MessageLoader.cpp"),
             PCHObject(NonMatching, "GC2D/HelpActor.cpp"),
-            Object(Matching, "GC2D/MessageUtil.cpp"),
+            Object(MatchingFor("GMSJ01"), "GC2D/MessageUtil.cpp"),
             PCHObject(NonMatching, "GC2D/CardSave.cpp"),
             PCHObject(NonMatching, "GC2D/CardLoad.cpp"),
             PCHObject(NonMatching, "GC2D/ConsoleStr.cpp"),
@@ -1123,7 +1137,7 @@ config.libs = [
             PCHObject(NonMatching, "GC2D/SunGlass.cpp"),
             PCHObject(Matching, "GC2D/ShineFader.cpp"),
             PCHObject(NonMatching, "GC2D/ProgSelect.cpp"),
-            Object(NonMatching, "GC2D/hx_wiper.c"),
+            Object(NonMatching, "GC2D/hx_wiper.c", cflags=[*cflags_game, "-inline noauto"]),
             PCHObject(NonMatching, "GC2D/MovieSubtitle.cpp"),
             PCHObject(NonMatching, "GC2D/Option.cpp"),
             PCHObject(NonMatching, "GC2D/MovieRumble.cpp"),
@@ -1140,6 +1154,7 @@ config.libs = [
             PCHObject(NonMatching, "Enemy/emario.cpp"),
             PCHObject(NonMatching, "Enemy/enemy.cpp"),
             PCHObject(NonMatching, "Enemy/enemyAttachment.cpp"),
+            PCHObject(Matching, "Enemy/enemyinterp.cpp"),
             PCHObject(NonMatching, "Enemy/enemymanager.cpp"),
             PCHObject(NonMatching, "Enemy/enemyMario.cpp"),
             PCHObject(NonMatching, "Enemy/feetinv.cpp"),
@@ -1200,7 +1215,7 @@ config.libs = [
             PCHObject(NonMatching, "Enemy/hauntLeg.cpp"),
             PCHObject(NonMatching, "Enemy/areacylinder.cpp"),
             PCHObject(NonMatching, "Enemy/wireTrap.cpp"),
-            PCHObject(NonMatching, "Enemy/BossHanachanSound.cpp"),
+            PCHObject(MatchingFor("GMSJ01"), "Enemy/BossHanachanSound.cpp"),
             PCHObject(NonMatching, "Enemy/rocket.cpp"),
             PCHObject(NonMatching, "Enemy/Kazekun.cpp"),
             PCHObject(NonMatching, "Enemy/bossManta.cpp"),
@@ -1277,6 +1292,13 @@ config.libs = [
         ],
     },
 ]
+
+for lib in config.libs:
+    for obj in lib["objects"]:
+        top, _, rest = obj.name.partition("/")
+        if top in middleware_libs:
+            obj.options["src_dir"] = f"libs/{top}/src"
+            obj.options["source"] = rest
 
 # Optional extra categories for progress tracking
 # Adjust as desired for your project

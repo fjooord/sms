@@ -27,6 +27,7 @@
 #include <MSound/MSSetSound.hpp>
 #include <MSound/MSoundBGM.hpp>
 #include <M3DUtil/InfectiousStrings.hpp>
+#include <macros.h>
 
 namespace {
 const GXColorS10 cBodyColorOnFire   = { 400, -50, -100, 0 };
@@ -201,22 +202,26 @@ void TTailRubber::restrict()
 	avgHorLen /= (f32)(unk0.size() - 1);
 
 	if (mFixTailPos) {
+		JGeometry::TVec3<f32> diff;
 		for (Node *e = unk0.begin() - 1, *it = unk0.end() - 2; it != e; --it) {
-			JGeometry::TVec3<f32> diff = (it + 1)->mPos;
+			diff = (it + 1)->mPos;
 			diff -= it->mPos;
-			diff.y = 0.0f;
-			if (avgHorLen < diff.length()) {
-				diff.setLength(diff.length() - avgHorLen);
+			diff.y           = 0.0f;
+			const f32 length = diff.length();
+			if (avgHorLen < length) {
+				diff.setLength(length - avgHorLen);
 				it->mPos += diff;
 			}
 		}
 	} else {
+		JGeometry::TVec3<f32> diff;
 		for (Node *it = unk0.begin() + 1, *e = unk0.end(); it != e; ++it) {
-			JGeometry::TVec3<f32> diff = (it - 1)->mPos;
+			diff = (it - 1)->mPos;
 			diff -= it->mPos;
-			diff.y = 0.0f;
-			if (avgHorLen < diff.length()) {
-				diff.setLength(diff.length() - avgHorLen);
+			diff.y           = 0.0f;
+			const f32 length = diff.length();
+			if (avgHorLen < length) {
+				diff.setLength(length - avgHorLen);
 				it->mPos += diff;
 			}
 		}
@@ -308,7 +313,7 @@ void TFireWanwanManager::perform(u32 cue, JDrama::TGraphics* graphics)
 		if (!gpMap->isInArea(wanwan->mPosition.x, wanwan->mPosition.z)
 		    || (wanwan->getGroundPlane()
 		        && wanwan->getGroundPlane()->isDeathPlane())) {
-			wanwan->kill();
+			wanwan->reset();
 		}
 	}
 
@@ -408,8 +413,15 @@ void TFireWanwanTailNode::perform(u32 cue, JDrama::TGraphics* graphics,
 	if (cue & CUE_CALC_ANIM) {
 		TPosition3f mtx;
 
-		SMS_CalcToDirMatrix(mtx, param_4,
-		                    JGeometry::TVec3<f32>(0.0f, 1.0f, 0.0f));
+		JGeometry::TVec3<f32> xDir;
+		xDir.cross(JGeometry::TVec3<f32>(0.0f, 1.0f, 0.0f), param_4);
+		xDir.normalize();
+		JGeometry::TVec3<f32> yDir;
+		yDir.cross(param_4, xDir);
+		yDir.normalize();
+		mtx.setXDir(xDir);
+		mtx.setYDir(yDir);
+		mtx.setZDir(param_4);
 
 		mtx.setTrans(param_3);
 
@@ -432,7 +444,7 @@ TFireWanwanTailHit::TFireWanwanTailHit(TFireWanwan& param_1)
 
 BOOL TFireWanwanTailHit::receiveMessage(THitActor* sender, u32 message)
 {
-	if (sender->getActorType() == 0x80000001) {
+	if (sender->getActorType() == ACTOR_TYPE_MARIO) {
 		if (message == HIT_MESSAGE_TAKE) {
 			if (!mOwner->canTakenByMario())
 				return false;
@@ -441,7 +453,7 @@ BOOL TFireWanwanTailHit::receiveMessage(THitActor* sender, u32 message)
 			return true;
 		}
 
-		if (message == HIT_MESSAGE_THROWN || message == HIT_MESSAGE_UNK8) {
+		if (message == HIT_MESSAGE_THROWN || message == HIT_MESSAGE_DETACH) {
 			behaveApart();
 			return true;
 		}
@@ -517,9 +529,10 @@ void TFireWanwanTailHit::init()
 	static_cast<TIdxGroupObj*>(JDrama::TNameRefGen::search("敵グループ"))
 	    ->getChildren()
 	    .push_back(this);
-	initHitActor(0x10000028, 0, 0, 0.0f, 0.0f, 30.0f, 200.0f);
-	offHitFlag(HIT_FLAG_NO_COLLISION);
-	onHitFlag(HIT_FLAG_CANNOT_ATTACK);
+	initHitActor(ACTOR_TYPE_FIRE_WANWAN_TAIL_HIT, 0, 0, 0.0f, 0.0f, 30.0f,
+	             200.0f);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_ATTACK);
 	mIsOnFire = false;
 }
 
@@ -728,7 +741,7 @@ TFireWanwan::TFireWanwan(const char* name)
 void TFireWanwan::init(TLiveManager* manager)
 {
 	TSmallEnemy::init(manager);
-	mActorType = 0x1000000E;
+	mActorType = ACTOR_TYPE_FIRE_WANWAN;
 	unk150     = 1;
 	mSpine->initWith(&TNerveFireWanwanGraphWander::theNerve());
 	TPosition3f mtx;
@@ -1097,7 +1110,10 @@ void TFireWanwan::calcRootMatrix()
 		return;
 	{
 		MtxPtr mtx = getModel()->getBaseTRMtx();
-		JGeometry::TVec3<f32> v1(mtx[0][1], mtx[1][1], mtx[2][1]);
+		JGeometry::TVec3<f32> v1;
+		v1.x = mtx[0][1];
+		v1.y = mtx[1][1];
+		v1.z = mtx[2][1];
 		JGeometry::TVec3<f32> v2(mtx[0][2], mtx[1][2], mtx[2][2]);
 		v1.normalize();
 		v2.normalize();
@@ -1130,8 +1146,8 @@ void TFireWanwan::moveObject()
 	updateHitPoint();
 	checkHungTail();
 
-	mLinearVelocity.zero();
-	mAngularVelocity.zero();
+	mPositionDelta.zero();
+	mRotationDelta.zero();
 
 	control();
 
@@ -1147,8 +1163,8 @@ void TFireWanwan::moveObject()
 	checkInPond();
 	setBehavior();
 
-	mPosition += mLinearVelocity;
-	mRotation += mAngularVelocity;
+	mPosition += mPositionDelta;
+	mRotation += mRotationDelta;
 
 	if (mSprayedByWaterCooldown > 0)
 		mSprayedByWaterCooldown += 1;
@@ -1156,8 +1172,9 @@ void TFireWanwan::moveObject()
 	if (mSprayedByWaterCooldown > 30)
 		mSprayedByWaterCooldown = 0;
 
-	if (mMapCollisionManager && mMapCollisionManager->unk8)
-		mMapCollisionManager->unk8->moveSRT(mPosition, mRotation, mScaling);
+	if (mMapCollisionManager)
+		mMapCollisionManager->moveActiveCollisionSRT(mPosition, mRotation,
+		                                             mScaling);
 
 	if (!isInhibitedForceMove())
 		calcRidePos();
@@ -1219,7 +1236,10 @@ void TFireWanwan::updatePollute()
 
 	mPolluteTimer = getSaveParam2()->mPolluteTimerMax.get();
 	MtxPtr mtx    = getModel()->getBaseTRMtx();
-	JGeometry::TVec3<f32> v1(mtx[0][0], mtx[1][0], mtx[2][0]);
+	JGeometry::TVec3<f32> v1;
+	v1.x = mtx[0][0];
+	v1.y = mtx[1][0];
+	v1.z = mtx[2][0];
 	v1.scaleAdd((MsRandF() - 0.5f) * 2.0f * mAttackRadius, mPosition, v1);
 
 	f32 radius = 375.0f;
@@ -1246,8 +1266,10 @@ void TFireWanwan::updateHitPoint()
 
 void TFireWanwan::emitEffects()
 {
+	JGeometry::TVec3<f32> local_2c;
 	MtxPtr mtx = getModel()->getAnmMtx(mCenterJointIdx);
-	unk1F0.set(mtx[0][3], mtx[1][3], mtx[2][3]);
+	local_2c.set(mtx[0][3], mtx[1][3], mtx[2][3]);
+	unk1F0.set(local_2c);
 
 	if (mHitPoints != 0 && unk194->mIsOnFire) {
 		SMS_EasyEmitParticle(FIREWANWAN_JPA_MS_CAN_YUGAMI, &unk1F0, this,
@@ -1339,15 +1361,15 @@ void TFireWanwan::checkHitActors()
 		if (*it == this)
 			continue;
 
-		if ((*it)->isActorType(0x80000001)) {
+		if ((*it)->isActorType(ACTOR_TYPE_MARIO)) {
 			attackToMario();
 			continue;
 		}
 
-		if ((*it)->isActorType(0x10000028))
+		if ((*it)->isActorType(ACTOR_TYPE_FIRE_WANWAN_TAIL_HIT))
 			continue;
 
-		if ((*it)->isActorType(0x1000000E)) {
+		if ((*it)->isActorType(ACTOR_TYPE_FIRE_WANWAN)) {
 			behaveToHitOthers((*it));
 			behaveHitComrades();
 
@@ -1531,7 +1553,7 @@ void TFireWanwan::attackToMario()
 		if (isFreeze()) {
 			(void)nerve;
 		} else {
-			SMS_SendMessageToMario(this, HIT_MESSAGE_UNKA);
+			SMS_SendMessageToMario(this, HIT_MESSAGE_BURN);
 			mStopSearchTimer = getSaveParam2()->mStopSearchTimerMax.get();
 		}
 	}
@@ -1556,11 +1578,11 @@ void TFireWanwan::bind()
 	mVelocity *= getSaveParam2()->mAirFric.get();
 
 	JGeometry::TVec3<f32> vel     = mVelocity;
-	JGeometry::TVec3<f32> velStep = mLinearVelocity;
-	velStep += vel;
+	JGeometry::TVec3<f32> velStep = mPositionDelta;
+	vel += velStep;
 
-	int stepCount = int(velStep.length() / 25.0f) + 1;
-	velStep *= 1.0f / stepCount;
+	int stepCount = int(vel.length() / 25.0f) + 1;
+	vel *= 1.0f / stepCount;
 
 	JGeometry::TVec3<f32> totalNormal(0.0f, 0.0f, 0.0f);
 	int iVar12 = 0;
@@ -1568,15 +1590,16 @@ void TFireWanwan::bind()
 	for (int i = 0; i < stepCount; ++i) {
 		JGeometry::TVec3<f32> boundStep;
 		JGeometry::TVec3<f32> stepNormal;
-		iVar12 += bindBody(&boundStep, &stepNormal, velStep);
+		int collisionNum = bindBody(&boundStep, &stepNormal, vel);
 
-		bVar2 &= checkLiveFlag2(LIVE_FLAG_AIRBORNE);
+		bVar2 &= isAirborne();
+		iVar12 += collisionNum;
 
 		mPosition += boundStep;
 		totalNormal += stepNormal;
 	}
 
-	mLinearVelocity.zero();
+	mPositionDelta.zero();
 
 	if (bVar2)
 		onLiveFlag(LIVE_FLAG_AIRBORNE);
@@ -1664,10 +1687,11 @@ void TFireWanwan::bindPoint(JGeometry::TVec3<f32>* out_offset,
                             const JGeometry::TVec3<f32>& param_3, f32 radius,
                             TBGWallCheckRecord* out_record)
 {
+	const TBGCheckData* local_30;
+	const TBGCheckData* local_34;
+
 	JGeometry::TVec3<f32> actualPoint = point;
 	actualPoint += param_3;
-
-	const TBGCheckData* local_30;
 
 	if (checkLiveFlag(LIVE_FLAG_UNK1000))
 		mGroundHeight = gpMap->checkGroundIgnoreWaterSurface(
@@ -1683,7 +1707,6 @@ void TFireWanwan::bindPoint(JGeometry::TVec3<f32>* out_offset,
 	if (point.y > actualPoint.y && !local_30->isIllegalData()) {
 		if (!local_30->isEnemyThrough()) {
 			f32 dVar9;
-			const TBGCheckData* local_34;
 			if (checkLiveFlag(LIVE_FLAG_UNK1000))
 				dVar9 = gpMap->checkGroundIgnoreWaterSurface(
 				    actualPoint.x, actualPoint.y + mHeadHeight, actualPoint.z,
@@ -1764,7 +1787,7 @@ bool TFireWanwan::behaveHitWallOnFlying(const TBGCheckData* check_data)
 {
 	const TLiveActor* actor = check_data->getActor();
 
-	if (actor && actor->isActorType(0x4000001C)) {
+	if (actor && actor->isActorType(ACTOR_TYPE_WOOD_BOX)) {
 		((TLiveActor*)actor)->receiveMessage(this, HIT_MESSAGE_HIP_DROP);
 		return true;
 	}
@@ -1871,7 +1894,7 @@ DEFINE_NERVE(TNerveFireWanwanAttack, TLiveActor)
 
 	if (spine->getTime() == 0) {
 		self->setBckAnm(3);
-		self->setGoalPathMario();
+		self->setGoalPath(TPathNode((THitActor*)gpMarioAddress));
 	}
 
 	if (self->doAttack()) {
@@ -2028,7 +2051,8 @@ DEFINE_NERVE(TNerveFireWanwanHungTail, TLiveActor)
 	JGeometry::TVec3<f32> vec = self->mPosition;
 	vec -= SMS_GetMarioPos();
 
-	self->mRotation.y = MsGetRotFromZaxisY(vec);
+	f32 rot           = MsGetRotFromZaxisY(vec);
+	self->mRotation.y = rot;
 	if (self->isReadyToFly()) {
 		spine->pushAfterCurrent(&TNerveFireWanwanFly::theNerve());
 		return true;
@@ -2040,9 +2064,10 @@ DEFINE_NERVE(TNerveFireWanwanHungTail, TLiveActor)
 // TODO: fake
 static inline JGeometry::TVec3<f32> fromPolar(f32 theta, f32 radius)
 {
-	return JGeometry::TVec3<f32>(radius * JMASSin(theta * (65536.0f / 360.0f)),
+	JGeometry::TVec3<f32> result(radius * JMASSin(theta * (65536.0f / 360.0f)),
 	                             0.0f,
 	                             radius * JMASCos(theta * (65536.0f / 360.0f)));
+	return result;
 }
 
 DEFINE_NERVE(TNerveFireWanwanFly, TLiveActor)

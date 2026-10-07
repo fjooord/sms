@@ -12,10 +12,27 @@
 #include <MSound/MSSetSound.hpp>
 #include <MSound/MSoundBGM.hpp>
 
+TMapWireManager* gpMapWireManager;
+
 f32 TMapWireActor::mCommonAttackRadius = 200.0f;
 f32 TMapWireActor::mCommonAttackHeight = 200.0f;
 
-void TMapWireActor::checkTakingActor() { }
+void TMapWireActor::checkTakingActor()
+{
+	if (mHeldObject != nullptr && mHeldObject->mHolder != this) {
+		mHeldObject = nullptr;
+		unk70       = 1;
+	}
+
+	if (unk74->unk7C != nullptr) {
+		for (int i = 0; i < mColCount; ++i) {
+			THitActor* col = mCollisions[i];
+			if (col->isActorType(ACTOR_TYPE_MARIO)
+			    && col->receiveMessage(this, HIT_MESSAGE_TAKE))
+				mHeldObject = (TTakeActor*)mCollisions[i];
+		}
+	}
+}
 
 f32 TMapWireActor::getPosInWire() const
 {
@@ -41,7 +58,7 @@ void TMapWireActor::getTipPoints(JGeometry::TVec3<f32>* start,
 
 BOOL TMapWireActor::receiveMessage(THitActor* sender, u32 message)
 {
-	if (message == HIT_MESSAGE_UNK8 && sender == mHeldObject) {
+	if (message == HIT_MESSAGE_DETACH && sender == mHeldObject) {
 		mHeldObject = nullptr;
 		unk70       = 1;
 		return true;
@@ -54,7 +71,8 @@ void TMapWireActor::init(TMapWireActorManager* manager)
 {
 	unk74 = manager;
 
-	initHitActor(0x40000098, 1, -0x80000000, TMapWireActor::mCommonAttackRadius,
+	initHitActor(ACTOR_TYPE_MAP_WIRE_ACTOR, 1, HIT_CATEGORY_PLAYER,
+	             TMapWireActor::mCommonAttackRadius,
 	             TMapWireActor::mCommonAttackHeight, 0.0f, 0.0f);
 
 	TIdxGroupObj* group = static_cast<TIdxGroupObj*>(
@@ -105,19 +123,7 @@ void TMapWireActorManager::doActorToWire()
 	else
 		unk7C = nullptr;
 
-	if (unk4.mHeldObject != nullptr && unk4.mHeldObject->mHolder != &unk4) {
-		unk4.mHeldObject = nullptr;
-		unk4.unk70       = 1;
-	}
-
-	if (unk0->mHeldObject != nullptr) {
-		for (int i = 0; i < unk4.mColCount; ++i) {
-			THitActor* col = unk4.mCollisions[i];
-			if (col->isActorType(0x80000001)
-			    && col->receiveMessage(&unk4, HIT_MESSAGE_TAKE))
-				unk4.mHeldObject = (TTakeActor*)unk4.mCollisions[i];
-		}
-	}
+	unk4.checkTakingActor();
 
 	if (previousWire != nullptr) {
 		if (unk7C != nullptr && unk7C != previousWire)
@@ -166,8 +172,8 @@ void TMapWireManager::getPointPosInNthWire(int param_1,
                                            const JGeometry::TVec3<f32>& param_2,
                                            JGeometry::TVec3<f32>* param_3) const
 {
-	getWire(param_1)->getPointPosOnWire(getWire(param_1)->getPosInWire(param_2),
-	                                    param_3);
+	f32 pos = getWire(param_1)->getPosInWire(param_2);
+	getWire(param_1)->getPointPosOnWire(pos, param_3);
 }
 
 void TMapWireManager::getPointPosInWire(const JGeometry::TVec3<f32>&,
@@ -187,10 +193,10 @@ void TMapWireManager::perform(u32 cue, JDrama::TGraphics* graphics)
 		TMapWireActorManager* mgr;
 		for (int i = 0; i < unk1C; ++i) {
 			mgr = unk24[i];
-			mgr->unk4.onHitFlag(HIT_FLAG_NO_COLLISION);
+			mgr->unk4.onHitFilter(HIT_FILTER_NO_COLLISION);
 			if (mgr->unk7C != nullptr) {
 				MtxPtr mtx = gpMarioOriginal->getTakenMtx();
-				mgr->unk4.offHitFlag(HIT_FLAG_NO_COLLISION);
+				mgr->unk4.offHitFilter(HIT_FILTER_NO_COLLISION);
 				mgr->unk4.mPosition.set(mtx[0][3], mtx[1][3], mtx[2][3]);
 			}
 		}
@@ -232,20 +238,22 @@ void TMapWireManager::load(JSUMemoryInputStream& stream)
 	stream >> TMapWire::mDrawWidth;
 	stream >> TMapWire::mDrawHeight;
 
-	s32 val;
-	stream >> val;
-	mUpperSurface.r = val;
-	stream >> val;
-	mUpperSurface.g = val;
-	stream >> val;
-	mUpperSurface.b = val;
+	s32 r;
+	s32 g;
+	s32 b;
+	stream >> r;
+	mUpperSurface.r = r;
+	stream >> g;
+	mUpperSurface.g = g;
+	stream >> b;
+	mUpperSurface.b = b;
 
-	stream >> val;
-	mLowerSurface.r = val;
-	stream >> val;
-	mLowerSurface.g = val;
-	stream >> val;
-	mLowerSurface.b = val;
+	stream >> r;
+	mLowerSurface.r = r;
+	stream >> g;
+	mLowerSurface.g = g;
+	stream >> b;
+	mLowerSurface.b = b;
 
 	unk18 = new TMapWire*[unk14];
 	unk24 = new TMapWireActorManager*[unk20];

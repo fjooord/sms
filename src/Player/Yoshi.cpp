@@ -97,7 +97,7 @@ void TYoshi::init(TMario* param_1)
 	                                          | (4 << J3DMLF_TevStageNumShift)),
 	                   0, 1);
 	mActor->setModel(yoshiModel, 0);
-	mActor->initNormalMotionBlend();
+	mActor->initBckNormalMotionBlend();
 	mActor->offMakeDL();
 
 	mJointIdxTongue
@@ -401,7 +401,8 @@ bool TYoshi::appearFromEgg(const JGeometry::TVec3<f32>& pos, f32 yrot,
 	THitActor* fruit      = egg->getFruit();
 	TTakeActor* takeActor = (TTakeActor*)fruit;
 	if (mMario->getHeldObject() == fruit) {
-		takeActor->receiveMessage(mMario->getFloorHitActor(), HIT_MESSAGE_UNK8);
+		takeActor->receiveMessage(mMario->getFloorHitActor(),
+		                          HIT_MESSAGE_DETACH);
 		takeActor->mHolder  = nullptr;
 		mMario->mHeldObject = nullptr;
 	}
@@ -488,7 +489,14 @@ void TYoshi::getOff(bool param_1)
 	MSBgm::setStageBgmYoshiPercussion(false);
 }
 
-void TYoshi::thinkJumpEnd(u16, u16*) { }
+BOOL TYoshi::thinkJumpEnd(u16 cur_idx, u16* new_idx)
+{
+	if (cur_idx == 12) {
+		*new_idx = 11;
+		return TRUE;
+	}
+	return FALSE;
+}
 
 // TODO: tons of missing inlines
 void TYoshi::thinkAnimation()
@@ -499,15 +507,7 @@ void TYoshi::thinkAnimation()
 	u32 status    = mMario->mStatus;
 
 	if (status & MARIO_STATUS_FLAG_RUNNING) {
-		BOOL tmp;
-		if (curIdx == 12) {
-			newIdx = 11;
-			tmp    = true;
-		} else {
-			tmp = false;
-		}
-
-		if (!tmp) {
+		if (!thinkJumpEnd(curIdx, &newIdx)) {
 			newIdx = 15;
 			if (status == MARIO_STATUS_CATCH || status == MARIO_STATUS_OIL_SLIP
 			    || status == MARIO_STATUS_OIL_SLOPE
@@ -603,7 +603,7 @@ void TYoshi::thinkAnimation()
 			ratio = 1.0f;
 
 		f32 tmp = 1.0f - ratio;
-		mActor->setMotionBlendRatioForBck(tmp);
+		mActor->setBckMotionBlendRatio(tmp);
 
 		J3DAnmTransform* oldAnm = mActor->getBckOldMotionBlendAnmPtr();
 		oldAnm->setFrame(mActor->getFrameCtrl(ANM_TYPE_BCK)->getFrame());
@@ -613,7 +613,7 @@ void TYoshi::thinkAnimation()
 		else
 			nextFrame = unkA0 + unkA4 * mMario->mForwardVel;
 	} else {
-		mActor->setMotionBlendRatioForBck(0.0f);
+		mActor->setBckMotionBlendRatio(0.0f);
 	}
 
 	mActor->getFrameCtrl(ANM_TYPE_BCK)->setRate(nextFrame);
@@ -628,15 +628,15 @@ void TYoshi::thinkUpper()
 
 	J3DJoint* joint
 	    = mActor->getModel()->getModelData()->getJointNodePointer(18);
-	if (mTongue->mState == TYoshiTongue::STATE_IDLE
-	    && mMario->mWaterGun->isEmitting()) {
+	if (mTongue->mState != TYoshiTongue::STATE_IDLE
+	    || mMario->mWaterGun->isEmitting()) {
 		if (joint->getMtxCalc() != unk54) {
 			unk5C.setFrame(unk5C.getStart());
 			unk5C.setRate(1.0f);
 			unk5C.setEnd(unk4C->getFrameMax());
 			unk5C.setFrame(0.0f);
 			joint->setMtxCalc(unk54);
-			mBodyAnmSound->initAnmSound(mBodyAnmSoundTable[3], 1, 0.0f);
+			mTongueAnmSound->initAnmSound(mBodyAnmSoundTable[3], 1, 0.0f);
 		}
 
 		unk4C->setFrame(unk5C.getFrame());
@@ -647,7 +647,7 @@ void TYoshi::thinkUpper()
 			unk5C.setEnd(unk50->getFrameMax());
 			unk5C.setFrame(0.0f);
 			joint->setMtxCalc(unk58);
-			mBodyAnmSound->initAnmSound(mBodyAnmSoundTable[4], 1, 0.0f);
+			mTongueAnmSound->initAnmSound(mBodyAnmSoundTable[4], 1, 0.0f);
 		} else if (joint->getMtxCalc() == unk58) {
 			if (unk5C.checkState(J3DFrameCtrl::STATE_COMPLETED_ONCE
 			                     | J3DFrameCtrl::STATE_LOOPED_ONCE))
@@ -735,16 +735,16 @@ void TYoshi::doEat(u32 param_1)
 	BOOL bVar1 = true;
 
 	switch (param_1) {
-	case 0x40000391:
-	case 0x40000392:
+	case ACTOR_TYPE_FRUIT_PAPAYA:
+	case ACTOR_TYPE_FRUIT_PINE:
 		r31 = 1;
 		break;
-	case 0x40000393:
-	case 0x40000395:
+	case ACTOR_TYPE_FRUIT_DURIAN:
+	case ACTOR_TYPE_RED_PEPPER:
 		r31 = 2;
 		break;
-	case 0x40000394:
-	case 0x40000390:
+	case ACTOR_TYPE_FRUIT_BANANA:
+	case ACTOR_TYPE_FRUIT_COCONUT:
 		r31 = 3;
 		break;
 	default:
@@ -868,7 +868,7 @@ void TYoshi::movement()
 		mTranslation = mMario->mPosition;
 		mEggRotSpeed = mMario->mFaceAngle.y;
 
-		if (mMario->mGamePad->checkMeaning(TMarioGamePad::MEANING_B)) {
+		if (mMario->mGamePad->checkFrameMeaning(TMarioGamePad::MEANING_B)) {
 			emitTongue();
 		}
 		if (unkC <= 0)

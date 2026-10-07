@@ -19,6 +19,8 @@
 // rogue include
 #include <M3DUtil/InfectiousStrings.hpp>
 
+TConductor* gpConductor;
+
 TConductor::TCondParams::TCondParams()
     : TParams("/conductor.prm")
     , PARAM_INIT(mEnemyFarClip, 5000.0f)
@@ -216,7 +218,8 @@ TConductor::makeOneEnemyAppear(const JGeometry::TVec3<f32>& param_1,
 	if (!mgr)
 		return nullptr;
 
-	if (TSpineEnemy* actor = (TSpineEnemy*)mgr->getActorByFlag(0x1)) {
+	TSpineEnemy* actor = (TSpineEnemy*)mgr->getActorByFlag(0x1);
+	if (actor) {
 		actor->resetToPosition(param_1);
 		return actor;
 	}
@@ -224,7 +227,8 @@ TConductor::makeOneEnemyAppear(const JGeometry::TVec3<f32>& param_1,
 	if (param_3 == 0)
 		return nullptr;
 
-	if (TSpineEnemy* actor = (TSpineEnemy*)mgr->getActorByFlag(0x804)) {
+	actor = (TSpineEnemy*)mgr->getActorByFlag(0x804);
+	if (actor) {
 		actor->resetToPosition(param_1);
 		return actor;
 	}
@@ -232,17 +236,18 @@ TConductor::makeOneEnemyAppear(const JGeometry::TVec3<f32>& param_1,
 	if (param_3 == 1)
 		return nullptr;
 
-	TSpineEnemy* enemy = mgr->getObj(0);
-	enemy->resetToPosition(param_1);
-	return enemy;
+	actor = mgr->getObj(0);
+	actor->resetToPosition(param_1);
+	return actor;
 }
 
 void TConductor::killEnemiesWithin(const JGeometry::TVec3<f32>& param_1,
                                    f32 param_2)
 {
-	JGadget::TList<TEnemyManager*>::iterator it, e;
-	for (it = unk20.begin(), e = unk20.end(); it != e; ++it) {
-		if ((*it)->search("ボスワンワンマネージャー") == nullptr)
+	JGadget::TList<TEnemyManager*>::iterator it = unk20.begin(),
+	                                         e  = unk20.end();
+	for (; it != e; ++it) {
+		if (!(*it)->search("ボスワンワンマネージャー"))
 			(*it)->killChildrenWithin(param_1, param_2);
 	}
 }
@@ -268,7 +273,7 @@ void TConductor::genEnemyFromPollution()
 	if (!mgr)
 		return;
 
-	JGeometry::TVec3<f32> targetPos = *gpMarioPos;
+	JGeometry::TVec3<f32> targetPos = SMS_GetMarioPos();
 	f32 r                           = MsRandF(unk84.mGenerateRadiusMin.get(),
 	                                          unk84.mGenerateRadiusMax.get());
 
@@ -303,9 +308,9 @@ void TConductor::genEnemyFromPollution()
 		return;
 
 	enemy->resetToPosition(targetPos);
-	enemy->moveObject();
+	enemy->calcRootMatrix();
 	if (enemy->getModel())
-		enemy->getModel()->entry();
+		enemy->getModel()->calc();
 }
 
 void TConductor::clipAloneActors(JDrama::TGraphics* param_1)

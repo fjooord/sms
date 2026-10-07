@@ -1,19 +1,11 @@
 #include <Map/MapCollisionEntry.hpp>
 #include <Map/MapCollisionData.hpp>
 #include <Map/MapData.hpp>
+#include <MarioUtil/MathUtil.hpp>
 
 // rogue includes needed for matching sinit & bss
 #include <MSound/MSSetSound.hpp>
 #include <MSound/MSoundBGM.hpp>
-
-template <class T> static inline T max(const T& a, const T& b)
-{
-	return a > b ? a : b;
-}
-template <class T> static inline T min(const T& a, const T& b)
-{
-	return b > a ? a : b;
-}
 
 void TBGCheckData::setVertex(const JGeometry::TVec3<f32>& point1,
                              const JGeometry::TVec3<f32>& point2,
@@ -35,8 +27,8 @@ void TBGCheckData::setVertex(const JGeometry::TVec3<f32>& point1,
 		mPlaneDistance = -(mNormal.x * mPoint1.x + mNormal.y * mPoint1.y
 		                   + mNormal.z * mPoint1.z);
 
-		mMinY = min(min(mPoint3.y, mPoint2.y), mPoint1.y);
-		mMaxY = max(mPoint1.y, max(mPoint2.y, mPoint3.y));
+		mMinY = MsMin(mPoint1.y, MsMin(mPoint2.y, mPoint3.y));
+		mMaxY = MsMax(mPoint1.y, MsMax(mPoint2.y, mPoint3.y));
 	}
 }
 
@@ -44,7 +36,7 @@ void TMapCollisionMove::setList()
 {
 	TBGCheckData* checkDataIt = mCheckDatas;
 	for (u32 i = mCheckDataNum; i != 0; --i) {
-		gpMapCollisionData->addCheckDataToGrid(checkDataIt, getUnk8());
+		gpMapCollisionData->addCheckDataToGrid(checkDataIt, getKind());
 		++checkDataIt;
 	}
 }
@@ -63,7 +55,7 @@ void TMapCollisionBase::setCheckData(const f32* vertices, const s16* indices,
 	param_3->setVertex(p1, p2, p3);
 
 	if (kind != 3)
-		gpMapCollisionData->addCheckDataToGrid(param_3, getUnk8());
+		gpMapCollisionData->addCheckDataToGrid(param_3, getKind());
 }
 
 void TBGCheckData::updateTrans(const JGeometry::TVec3<f32>& translate_by)
@@ -102,7 +94,7 @@ void TMapCollisionBase::updateTrans(const JGeometry::TVec3<f32>& param_1)
 		    = -(checkDataIt->mNormal.x * checkDataIt->mPoint1.x
 		        + checkDataIt->mNormal.y * checkDataIt->mPoint1.y
 		        + checkDataIt->mNormal.z * checkDataIt->mPoint1.z);
-		int kind = mKind;
+		int kind = getKind();
 		gpMapCollisionData->addCheckDataToGrid(checkDataIt, kind);
 	}
 
@@ -147,7 +139,7 @@ void TMapCollisionBase::initAllCheckData(s16 default_additional_data,
 		int bgType             = thing->mBGType;
 		BOOL useAdditionalData = thing->mFlags & HAS_ADDITIONAL_DATA;
 
-		u8* unkCit            = thing->unkC;
+		u8* soundMaterialIt   = thing->mSoundMaterials;
 		u8* unk10it           = thing->unk10;
 		s16* indexIt          = thing->mIndices;
 		s16* additionalDataIt = thing->mAdditionalDatas;
@@ -167,8 +159,8 @@ void TMapCollisionBase::initAllCheckData(s16 default_additional_data,
 			else
 				checkData->mData = default_additional_data;
 
-			checkData->unk6 = unkCit[j];
-			checkData->unk7 = unk10it[j];
+			checkData->mSoundMaterial = soundMaterialIt[j];
+			checkData->unk7           = unk10it[j];
 
 			indexIt += 3;
 

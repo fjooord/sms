@@ -116,7 +116,7 @@ TCardSave::TCardSave(const char* name, bool param_2)
 void TCardSave::load(JSUMemoryInputStream& stream)
 {
 	JDrama::TViewObj::load(stream);
-	initData(gpMarDirector->unk18[0]);
+	initData(SMSGetMarDirector()->getGamePad());
 }
 
 void TCardSave::initData(TMarioGamePad* param_1)
@@ -634,7 +634,8 @@ s8 TCardSave::waitForChoiceBM(TEProgress param_1, TEProgress param_2,
 
 			if (unk310 == PROGRESS_UNK17) {
 				unk128->hide();
-				u16 score = TFlagManager::getInstance()->getFlag(0x40000);
+				u16 score
+				    = TFlagManager::getInstance()->getFlag(MSF_SHINE_COUNT);
 				if (score < 100) {
 					unk148->changeTexture(unk1C[score / 10]->getTexInfo(), 0);
 					unk14C->changeTexture(unk1C[score % 10]->getTexInfo(), 0);
@@ -955,7 +956,7 @@ s8 TCardSave::drawMessageBM(TEProgress param_1)
 
 s8 TCardSave::waitForAnyKey(TEProgress param_1)
 {
-	s32 result = -1;
+	s8 result = -1;
 
 	switch (unk10) {
 	case 0:
@@ -1297,7 +1298,7 @@ s8 TCardSave::waitForSelect3(TEProgress param_1, TEProgress param_2,
 		break;
 
 	case 2: {
-		u8 oldSelect = unk2E9;
+		s8 oldSelect = unk2E9;
 		u32 input    = unk270->mEnabledFrameMeaning;
 
 		if (input & TMarioGamePad::MEANING_MENU_A) {
@@ -1375,7 +1376,10 @@ s8 TCardSave::waitForAnyKeyBM(TEProgress param_1)
 	switch (unk10) {
 	case 0:
 		setMessage(unk12C, 0x200, getCurMessageID());
-		setMessage(unk130, 0x200, getCurMessageID());
+		{
+			u16 messageID = getCurMessageID();
+			setMessage(unk130, 0x200, messageID);
+		}
 
 		unkF8->hide();
 		unk128->hide();
@@ -1489,7 +1493,7 @@ void TCardSave::execMovement_()
 
 	switch (unk310) {
 	case PROGRESS_UNK0:
-		unk2EA = gpApplication.mSaveFile;
+		unk2EA = SMSGetApplication()->mSaveFile;
 
 		if (unk308 == 7) {
 			unk310 = PROGRESS_UNK2E;
@@ -1747,9 +1751,9 @@ void TCardSave::execMovement_()
 		} else if (bm.unk18 == 0
 		           || bm.unk8
 		                  == TFlagManager::getInstance()->getLastSaveTime()) {
-			unk310 = PROGRESS_UNK2C;
-		} else {
 			unk310 = PROGRESS_UNK16;
+		} else {
+			unk310 = PROGRESS_UNK2C;
 		}
 		break;
 	}
@@ -1832,8 +1836,8 @@ void TCardSave::execMovement_()
 
 						if (unk308 == 0 || unk308 == 6 || unk308 == 8) {
 							unk128->hide();
-							u16 score
-							    = TFlagManager::smInstance->getFlag(0x40000);
+							u16 score = TFlagManager::smInstance->getFlag(
+							    MSF_SHINE_COUNT);
 							if (score > 0x3E7)
 								score = 0x3E7;
 

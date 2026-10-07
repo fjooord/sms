@@ -54,7 +54,7 @@ void TRealoidActor::calcRootMatrix(TBoid* boid)
 		v.y             = hm[1][3];
 		v.z             = hm[2][3];
 		boid->mPosition = v;
-		unk70->getModel()->setBaseTRMtx(mHolder->getTakingMtx());
+		calcRootMatrixOnTaking();
 		return;
 	}
 
@@ -103,7 +103,7 @@ void TRealoidActor::checkHitActors()
 	end = mCollisions + mColCount;
 	for (; it != end; ++it) {
 		switch ((*it)->getActorType()) {
-		case 0x80000001:
+		case ACTOR_TYPE_MARIO:
 			SMS_SendMessageToMario(this, HIT_MESSAGE_ATTACK);
 			break;
 		}
@@ -112,7 +112,10 @@ void TRealoidActor::checkHitActors()
 
 MtxPtr TRealoidActor::getTakingMtx() { return unk78; }
 
-void TRealoidActor::calcRootMatrixOnTaking() { }
+void TRealoidActor::calcRootMatrixOnTaking()
+{
+	unk70->getModel()->setBaseTRMtx(mHolder->getTakingMtx());
+}
 
 TRealoid::TRealoid(const char* name)
     : TSpineEnemy(name)
@@ -178,7 +181,7 @@ void TRealoid::perform(u32 cue, JDrama::TGraphics* graphics)
 		unk154[i]->perform(cue, graphics);
 }
 
-void TFish::init() { mHitFlags |= HIT_FLAG_NO_COLLISION; }
+void TFish::init() { mHitFilter |= HIT_FILTER_NO_COLLISION; }
 
 TFishoid::TFishoid(int type, const char* name)
     : TRealoid(name)
@@ -200,13 +203,16 @@ void TFishoid::perform(u32 cue, JDrama::TGraphics* graphics)
 		boid->mPosition = pos;
 	}
 
+	performItem(cue, graphics);
+}
+
+void TFishoid::performItem(u32 cue, JDrama::TGraphics*)
+{
 	if (unk15C != nullptr && (cue & CUE_MOVE)) {
 		unk15C->mPosition
 		    = unk150->getBoid(unk150->getBoidNum() - 1)->mPosition;
 	}
 }
-
-void TFishoid::performItem(u32, JDrama::TGraphics*) { }
 
 void TFishoid::init(TLiveManager* manager)
 {
@@ -214,23 +220,24 @@ void TFishoid::init(TLiveManager* manager)
 	mManager->manageActor(this);
 	mSpine->initWith(&TNerveWaitForever<TLiveActor>::theNerve());
 	initHitActor(0, 1, 0, 0.0f, 0.0f, 0.0f, 0.0f);
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
-void TFishoid::initBoids() { }
+void TFishoid::initBoids()
+{
+	if (unk15C) {
+		TRealoidActor* realoid = getRealoid(unk150->mNumBoids - 1);
+		realoid->onFlag(TRealoidActor::FLAG_UNK2);
+		unk15C->makeObjAppeared();
+		unk15C->mPosition = realoid->mPosition;
+	}
+}
 
 void TFishoid::load(JSUMemoryInputStream& stream)
 {
 	loadDefault(stream, cFishoidMdlNames[mType], 0);
 
-	u32 eventId;
-	stream >> eventId;
-
-	unk15C = TMapObjBaseManager::newAndRegisterObjByEventID(eventId, "");
-	if (unk15C != nullptr) {
-		if (unk15C->isActorType(0x2000000E))
-			unk15C = gpItemManager->newAndRegisterCoinReal();
-	}
+	loadItem(stream);
 
 	unk150->mBaseSpeed         = 4.0f;
 	unk150->mNeighborRadius    = 200.0f;
@@ -248,15 +255,20 @@ void TFishoid::load(JSUMemoryInputStream& stream)
 	for (int i = 0; i < unk150->mNumBoids; ++i)
 		unk154[i]->unk70->setBck("fish_swim");
 
-	if (unk15C) {
-		TRealoidActor* realoid = getRealoid(unk150->mNumBoids - 1);
-		realoid->onFlag(TRealoidActor::FLAG_UNK2);
-		unk15C->makeObjAppeared();
-		unk15C->mPosition = realoid->mPosition;
-	}
+	initBoids();
 }
 
-void TFishoid::loadItem(JSUMemoryInputStream&) { }
+void TFishoid::loadItem(JSUMemoryInputStream& stream)
+{
+	u32 eventId;
+	stream >> eventId;
+
+	unk15C = TMapObjBaseManager::newAndRegisterObjByEventID(eventId, "");
+	if (unk15C != nullptr) {
+		if (unk15C->isActorType(ACTOR_TYPE_COIN))
+			unk15C = gpItemManager->newAndRegisterCoinReal();
+	}
+}
 
 TRealoidActor* TFishoid::createRealoidActor(MActor* actor)
 {
@@ -291,5 +303,3 @@ void TFishoidManager::createModelData()
 	};
 	createModelDataArray(entry);
 }
-
-TFishoidManager::~TFishoidManager() { }

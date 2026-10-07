@@ -27,8 +27,10 @@ config/GMSJ01/
   splits.txt          — per-TU section address ranges
   build.sha1          — SHA1 hash of the target DOL
 
-src/                  — decompiled C/C++ source files
-include/              — headers (class declarations, inline functions)
+src/                  — decompiled game source files
+include/              — game headers (class declarations, inline functions)
+libs/<name>/src/      — middleware source files (dolphin, JSystem, THPPlayer, PowerPC_EABI_Support, TRK_MINNOW_DOLPHIN, OdemuExi2)
+libs/<name>/include/  — middleware headers
 orig/GMSJ01/          — original game disc image (not committed)
 build/GMSJ01/         — build artifacts, compiled objects
   obj/                — target (original) object files extracted by dtk
@@ -150,7 +152,11 @@ and symbol-closure section.
 python tools/validate-symbol-order.py -u mario/MarioUtil/MathUtil
 ```
 
-Unit names are the same `mario/<path>` names as `decomp-diff.py`.
+Unit names are the same `mario/<path>` names as `decomp-diff.py`. Both
+versions use the `mario/` prefix; the tool compares the object of the version
+`objdiff.json` is configured for (the last `configure.py -v`) with the map that
+`config/<version>/config.yml` names, and prints which map it used. Give
+`--map` only to compare with a different map on purpose.
 
 What it reports:
 - **MISSING** (error) — a map symbol (used or UNUSED) that our object doesn't
@@ -222,7 +228,9 @@ Do the rescan yourself for relevant classes and TUs using relevant regular expre
 
 ## Source Organization
 
-Each `.o` file maps 1:1 to a `.cpp` file. The path is listed in `configure.py` under `config.libs`. Each object has a status:
+Each `.o` file maps 1:1 to a `.cpp` file. The path is listed in `configure.py` under `config.libs`.
+For a middleware object, the first path component is the library: the object `JSystem/JKernel/JKRHeap.cpp` has its source in `libs/JSystem/src/JKernel/JKRHeap.cpp`.
+Each object has a status:
 
 - `Matching` — our code compiles to byte-identical output. Linked into the final DOL.
 - `NonMatching` — work in progress. Not linked.
@@ -232,9 +240,12 @@ Each `.o` file maps 1:1 to a `.cpp` file. The path is listed in `configure.py` u
 
 | Directory | Description |
 |-----------|-------------|
-| `src/JSystem/` | Nintendo's JSystem middleware (J3D, JParticle, JDrama, JAudio, etc.) |
-| `src/dolphin/` | Dolphin SDK (OS, GX, DVD, PAD, etc.) |
-| `src/PowerPC_EABI_Support/` | Metrowerks runtime & MSL |
+| `libs/JSystem/` | Nintendo's JSystem middleware (J3D, JParticle, JDrama, JAudio, etc.) |
+| `libs/dolphin/` | Dolphin SDK (OS, GX, DVD, PAD, etc.) |
+| `libs/PowerPC_EABI_Support/` | Metrowerks runtime & MSL |
+| `libs/THPPlayer/` | THP movie player |
+| `libs/TRK_MINNOW_DOLPHIN/` | MetroTRK debugger |
+| `libs/OdemuExi2/` | Debugger EXI driver |
 | `src/System/` | Game system framework (directors, params, events) |
 | `src/Strategic/` | Core game object hierarchy (actors, hit detection, spine/nerve AI) |
 | `src/Player/` | Mario player code |
@@ -365,6 +376,8 @@ An agent is prohibited from committing `volatile char trash[0x10];` family of tr
 Never the less, their temporary use is encouraged to **validate** that the function matches modulo stack frame issues.
 It must however be noted that such tricks don't always resolve stack frame issues -- it is not rare for proper inlines at correct points in the function to be required for a perfect match.
 
+If only stack offsets still differ, stop. Leave the function nonmatching and write "frame-only" in the PR description. Don't commit locals, casts or temporaries whose only job is the frame.
+
 ## UNUSED Functions (Inlined/Dead Code)
 
 This is a critical concept for matching decomps.
@@ -432,7 +445,20 @@ UNUSED functions must still be reconstructed in the source because:
 - **Focus on one part of the function at a time**. Identify what exact lines in the source code a non-matching part of the disassembly corresponds. Use `--range` argument of the diff tool to only see the asm for the part being worked on.
 - **Use temporary marker calls to map source to asm when anchors are missing**. If there are no obvious anchors (for example, no calls to known functions nearby), temporarily add a fake external marker like `extern void marker__();` and call it at a candidate point in the function. The call will show up clearly in diff output and helps bracket surrounding instructions, and you can repeat this process to narrow correspondence precisely.
 - **Always remove marker calls after mapping**. Any extra call can change register allocation/scheduling and inhibit matching, so markers are strictly temporary debugging aids.
+- **Prove every hunk.** Before opening a PR, revert each change on its own, rebuild, and keep only those that move the object toward the target.
+- **Follow the file's own idioms.** Use a spelling only if an already-matching function in the same file or directory writes it the same way. A form the rest of the file never uses is usually a fakematch.
 - **Read [docs/AGENT_MATCHING_TIPS.md](docs/AGENT_MATCHING_TIPS.md)** for detailed MWCC codegen patterns that come up repeatedly.
+
+### Common review feedback
+
+- Call existing inlines instead of writing their bodies out.
+- Fill an UNUSED function only with code visible inlined in a linked caller; otherwise leave it empty.
+- Use `ARRAY_COUNT` for array loops and named enums for state values; if some values of a field are named, name all of its uses.
+- Keep unknown fields as `unkXX`, and don't rename anything in shared headers in a unit PR.
+- Don't copy globals or members into locals only to change codegen.
+- Keep existing `TODO` comments unless the change resolves them.
+- One unit per PR; leave out edits that don't change the object.
+- If the bot reports broken matches in units you didn't touch, the branch is behind main. Merge main.
 
 ### Pre-PR checklist
 
@@ -455,3 +481,6 @@ Before submitting a PR with matching work, make sure to check the following:
 - Validate that all weak symbols are actually marked as inline
   * In case of methods, they should be defined in-line in the header rather than in the cpp file and the inline keyword should not be used
 - Validate that all virtual functions in each class are properly marked as virtual (even if they are overriden) and are sorted in the order they appear inside of the virtual table
+- After a header change, rebuild everything and confirm no other unit lost a match.
+- For a unit that is empty on main, the symbol check allows nothing. Every symbol the map lists for it, weak and template copies included, must exist in the object.
+- CI also checks the PAL build; don't change or invent `VERSION_GMSP01` code you can't verify against it.

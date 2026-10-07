@@ -3,27 +3,76 @@
 
 #include <Enemy/WalkerEnemy.hpp>
 
-// fabricated: declaration recovered from mario.MAP statics, layout unknown
+class TFlyEnemyParams;
 
 class TFlyEnemy : public TWalkerEnemy {
 public:
-	TFlyEnemy(const char*); // declared only: suppresses the implicit default
-	                        // constructor
-	// static members (map: .sdata)
+	TFlyEnemy(const char*);
+
+	virtual void init(TLiveManager*);
+	virtual void bind();
+	virtual f32 getGravityY() const;
+	virtual void reset();
+	virtual void setAfterDeadEffect();
+	virtual void flyBehavior();
+	virtual void setChaseFlyAnm();
+	virtual void setNormalFlyAnm();
+
+	void flyMove();
+	void calcChaseParam();
+	void fly();
+
 	static f32 mTestSp;
 	static s32 mInvalidTime;
 	static f32 mTestMarioSpMax;
-};
 
-// fabricated: declaration recovered from mario.MAP statics, layout unknown
+public:
+	/* 0x194 */ f32 unk194;
+	/* 0x198 */ s32 unk198;
+	/* 0x19C */ TFlyEnemyParams* unk19C;
+	/* 0x1A0 */ s32 unk1A0;
+	/* 0x1A4 */ u8 unk1A4;
+	/* 0x1A5 */ u8 unk1A5;
+	/* 0x1A6 */ u8 unk1A6;
+	/* 0x1A7 */ u8 unk1A7;
+	/* 0x1A8 */ JGeometry::TVec3<f32> unk1A8;
+};
 
 class TKiller : public TFlyEnemy {
 public:
-	TKiller(const char*); // declared only: suppresses the implicit default
-	                      // constructor
-	// static members (map: .sdata)
+	TKiller(const char* name = "キラー");
+
+	virtual void init(TLiveManager*);
+	virtual void calcRootMatrix();
+	virtual void bind();
+	virtual const char** getBasNameTable() const;
+	virtual void reset();
+	virtual void genEventCoin();
+	virtual void behaveToWater(THitActor*);
+	virtual void changeOut();
+	virtual void setDeadAnm();
+	virtual void attackToMario();
+	virtual void forceKill();
+	virtual void setMActorAndKeeper();
+	virtual bool isHitValid(u32);
+	virtual bool isCollidMove(THitActor*);
+	virtual bool isFindMario(f32);
+	virtual void flyBehavior();
+	virtual void setChaseFlyAnm();
+	virtual void setNormalFlyAnm();
+
+	void setColorType();
+	bool isRollFly();
+
 	static u8 mSerialBomb;
 	static u8 mTrampleDie;
+
+	/* 0x1B4 */ char unk1B4[0x210 - 0x1B4];
+};
+
+class TKillerManager : public TSmallEnemyManager {
+public:
+	TKillerManager(const char* name = "キラーマネージャー");
 };
 
 #endif

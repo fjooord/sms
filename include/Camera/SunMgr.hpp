@@ -13,13 +13,10 @@ public:
 	TSunMgr(const char* name = "<TSunMgr>");
 
 	virtual void load(JSUMemoryInputStream&);
-	virtual void perform(unsigned long, JDrama::TGraphics*);
+	virtual void perform(u32, JDrama::TGraphics*);
 	virtual void drawSyncCallback(unsigned short);
 
 	int getAddColor() const;
-
-	// fabricated
-	u8 getUnk1CAlpha() { return unk1C.a; }
 
 	bool isThing() const { return unk15 & 2; }
 

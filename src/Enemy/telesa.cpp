@@ -165,9 +165,9 @@ void TTelesaManager::generatePetBottle(TTelesa* telesa)
 
 	if (unk61 >= 5) {
 		unk61 = 0;
-		gpItemManager->makeObjAppear(telesa->mPosition.x,
-		                             telesa->mPosition.y + 20.0f,
-		                             telesa->mPosition.z, 0x20000002, true);
+		gpItemManager->makeObjAppear(
+		    telesa->mPosition.x, telesa->mPosition.y + 20.0f,
+		    telesa->mPosition.z, ACTOR_TYPE_BOTTLE_LARGE, true);
 	}
 }
 
@@ -215,17 +215,17 @@ void TTelesa::load(JSUMemoryInputStream& stream)
 {
 	TSmallEnemy::load(stream);
 	reset();
-	mDampenedGroundHeight = mPosition.y;
+	mDampenedGroundHeight = getPosition().y;
 	setTypeNormal();
 }
 
 void TTelesa::init(TLiveManager* manager)
 {
 	TWalkerEnemy::init(manager);
-	mActorType = 0x1000000C;
+	mActorType = ACTOR_TYPE_TELESA;
 	unk150     = 18;
-	offHitFlag(HIT_FLAG_UNK10000000);
-	onHitFlag(HIT_FLAG_UNK8000000);
+	offHitFilter(HIT_CATEGORY_ENEMY);
+	onHitFilter(HIT_CATEGORY_BOSS);
 	unk194 = (TTelesaSaveLoadParams*)getSaveParam();
 	mSpine->initWith(&TNerveWalkerGraphWander::theNerve());
 	onLiveFlag(LIVE_FLAG_UNK8);
@@ -242,7 +242,7 @@ void TTelesa::init(TLiveManager* manager)
 	                     *img);
 	mMActor->setLightType(LIGHT_TYPE_INDIRECT);
 	if (mInstanceIndex == 0) {
-		for (u16 i = 0; i < getModel()->getModelData()->getJointNum(); ++i)
+		for (u8 i = 0; i < getModel()->getModelData()->getJointNum(); ++i)
 			;
 	}
 
@@ -266,7 +266,7 @@ void TTelesa::reset()
 
 	unk1B8      = 0;
 	mHeadHeight = 100.0f;
-	offHitFlag(HIT_FLAG_UNK10000000 | HIT_FLAG_UNK8000000);
+	offHitFilter(HIT_CATEGORY_ENEMY | HIT_CATEGORY_BOSS);
 	if (checkUnk150(0x1))
 		mSpine->initWith(&TNerveTelesaAttackMario::theNerve());
 	else
@@ -285,13 +285,13 @@ void TTelesa::perform(u32 cue, JDrama::TGraphics* graphics)
 		if (mImitatedBmd) {
 			if (cue & CUE_CALC_ANIM) {
 				const TBGCheckData* pTStack_5c;
-				gpMap->checkGround(mPosition.x, mPosition.y, mPosition.z,
-				                   &pTStack_5c);
+				f32 ground = gpMap->checkGround(mPosition.x, mPosition.y,
+				                                mPosition.z, &pTStack_5c);
 				Mtx afStack_58;
-				MsMtxSetXYZRPH(afStack_58, mPosition.x, mPosition.y,
-				               mPosition.z, mRotation.x, mRotation.y,
-				               mRotation.z);
-				mImitatedBmd->getMActor()->getModel()->setBaseTRMtx(afStack_58);
+				MtxPtr afStackPtr = afStack_58;
+				MsMtxSetXYZRPH(afStackPtr, mPosition.x, ground, mPosition.z,
+				               mRotation.x, mRotation.y, mRotation.z);
+				mImitatedBmd->getMActor()->getModel()->setBaseTRMtx(afStackPtr);
 				mImitatedBmd->getMActor()->getModel()->setBaseScale(
 				    JGeometry::TVec3<f32>(1.0f, 1.0f, 1.0f));
 			}
@@ -352,8 +352,8 @@ void TTelesa::attackToMario()
 	    || !(mPosition.y + mAttackHeight - 50.0f < SMS_GetMarioPos().y)) {
 		SMS_SendMessageToMario(this, HIT_MESSAGE_ATTACK);
 		if (unk184) {
-			if (mSpine->getCurrentNerve()
-			    != &TNerveWalkerPostAttack::theNerve())
+			const TNerveBase<TLiveActor>* nerve = mSpine->getCurrentNerve();
+			if (nerve != &TNerveWalkerPostAttack::theNerve())
 				; // huh???
 		}
 	}
@@ -386,7 +386,7 @@ void TTelesa::behaveToWater(THitActor* param_1)
 
 		mSpine->pushNerve(&TNerveTelesaFreeze::theNerve());
 		unk1C8 = 1;
-		onHitFlag(HIT_FLAG_UNK10000000);
+		onHitFilter(HIT_CATEGORY_ENEMY);
 	}
 }
 
@@ -435,7 +435,7 @@ void TTelesa::calcRootMatrix()
 	if (mSpine->getCurrentNerve() != &TNerveTelesaDie::theNerve()) {
 		for (u16 i = 0;
 		     i < mMActor->getModel()->getModelData()->getMaterialNum(); ++i) {
-			Mtx afStack_94;
+			Mtx44 afStack_94;
 			SMS_GetLightPerspectiveForEffectMtx(afStack_94);
 			mMActor->getModel()
 			    ->getModelData()
@@ -447,13 +447,15 @@ void TTelesa::calcRootMatrix()
 
 		if (JPABaseEmitter* emitter
 		    = gpMarioParticleManager->emitAndBindToMtxPtr(
-		        0x187, mMActor->getModel()->getAnmMtx(4), 1, this)) {
+		        PARTICLE_MS_TLS_YODARE_L, mMActor->getModel()->getAnmMtx(4), 1,
+		        this)) {
 			emitter->setGlobalAlpha(mTelesaFadeColor.a);
 		}
 
 		if (JPABaseEmitter* emitter
 		    = gpMarioParticleManager->emitAndBindToMtxPtr(
-		        0x188, mMActor->getModel()->getAnmMtx(4), 1, this)) {
+		        PARTICLE_MS_TLS_YODARE_S, mMActor->getModel()->getAnmMtx(3), 1,
+		        this)) {
 			emitter->setGlobalAlpha(mTelesaFadeColor.a);
 		}
 	}
@@ -476,7 +478,7 @@ void TTelesa::bind()
 
 	JGeometry::TVec3<f32> nextPos = mPosition;
 	nextPos.y -= mCurrentFlyHeight + mFlyBobOffsetY;
-	nextPos += mLinearVelocity;
+	nextPos += mPositionDelta;
 	nextPos += mVelocity;
 
 	mVelocity.y -= getGravityY();
@@ -490,7 +492,7 @@ void TTelesa::bind()
 		    = gpMap->checkGround(nextPos.x, nextPos.y + mHeadHeight + 200.0f,
 		                         nextPos.z, &mGroundPlane);
 
-		if (unk184 == nullptr
+		if (unk184 == 0
 		    && mSpine->getCurrentNerve() != &TNerveTelesaDie::theNerve()) {
 			if (unk124->getGraph() && !unk124->getGraph()->isDummy()) {
 				JGeometry::TVec3<f32> VStack_24;
@@ -505,14 +507,14 @@ void TTelesa::bind()
 	if (nextPos.y <= mGroundHeight + 0.05f) {
 		offLiveFlag(LIVE_FLAG_AIRBORNE);
 		mVelocity.set(0.0f, 0.0f, 0.0f);
-		if (mSpine->getCurrentNerve() != &TNerveTelesaDie::theNerve())
+		if (mSpine->getCurrentNerve() == &TNerveTelesaDie::theNerve())
 			nextPos.y = mGroundHeight;
 	} else {
 		onLiveFlag(LIVE_FLAG_AIRBORNE);
 	}
 
-	mLinearVelocity = nextPos - mPosition;
-	mLinearVelocity.y += mCurrentFlyHeight + mFlyBobOffsetY;
+	mPositionDelta = nextPos - mPosition;
+	mPositionDelta.y += mCurrentFlyHeight + mFlyBobOffsetY;
 }
 
 BOOL TTelesa::isReachedToGoal() const
@@ -538,7 +540,8 @@ bool TTelesa::changeByJuice()
 			return true;
 
 		mJuiceBlock = (TJuiceBlock*)gpMapObjManager->makeObjAppear(
-		    mPosition.x, mPosition.y, mPosition.z, 0x400002C4, true);
+		    mPosition.x, mPosition.y, mPosition.z, ACTOR_TYPE_TELESA_BLOCK,
+		    true);
 		if (mJuiceBlock == nullptr)
 			return false;
 
@@ -546,7 +549,7 @@ bool TTelesa::changeByJuice()
 		mJuiceBlock->unk140.set(0.1f, 0.1f, 0.1f);
 		mJuiceBlock->mRotation.y = mRotation.y;
 		mJuiceBlock->offLiveFlag(LIVE_FLAG_HIDDEN);
-		onHitFlag(HIT_FLAG_NO_COLLISION);
+		onHitFilter(HIT_FILTER_NO_COLLISION);
 		onLiveFlag(LIVE_FLAG_HIDDEN);
 
 		mSpine->pushNerve(&TNerveSmallEnemyChange::theNerve());
@@ -577,11 +580,11 @@ void TTelesa::scalingChangeActor()
 
 void TTelesa::changeOut()
 {
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	SMSGetMSound()->startSoundActor(MSD_SE_EN_TELSA_RECOVER, &mPosition, 0,
 	                                nullptr, 0, 4);
 	offLiveFlag(LIVE_FLAG_HIDDEN);
-	mPosition = mJuiceBlock->mPosition;
+	mPosition = mJuiceBlock->getPosition();
 	gpMarioParticleManager->emitAndBindToPosPtr(0xCD, &mPosition, 0, nullptr);
 	getMActor()->setFrameRate(SMSGetAnmFrameRate(), ANM_TYPE_BCK);
 	mJuiceBlock->kill();
@@ -592,7 +595,7 @@ const char** TTelesa::getBasNameTable() const { return telesa_bastable; }
 
 void TTelesa::setWalkAnm()
 {
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	if (!isBckAnm(6)) {
 		setBckAnm(6);
 		mFlyBobPhase = 0.0f;
@@ -681,8 +684,9 @@ void TTelesa::initAttacker(THitActor* param_1)
 	unk184 = 1;
 	mSpine->initWith(&TNerveTelesaAttackMario::theNerve());
 
-	MtxPtr mtx = ((TLiveActor*)param_1)->getModel()->getAnmMtx(5);
-	mPosition.set(mtx[3][0], mtx[3][1] - 150.0f, mtx[3][2]);
+	TLiveActor& actor = *(TLiveActor*)param_1;
+	MtxPtr mtx        = actor.getModel()->getAnmMtx(5);
+	mPosition.set(mtx[0][3], mtx[1][3] - 150.0f, mtx[2][3]);
 	mDampenedGroundHeight = mPosition.y;
 
 	mVelocity.set(0.0f, 8.0f, 0.0f);
@@ -692,7 +696,7 @@ void TTelesa::initAttacker(THitActor* param_1)
 
 	setFlyParam(1.0f);
 	unk1C8 = 0;
-	offHitFlag(HIT_FLAG_UNK10000000);
+	offHitFilter(HIT_CATEGORY_ENEMY);
 	unk150 &= ~0x40;
 	onLiveFlag(LIVE_FLAG_HIDDEN);
 	mMActor->getFrameCtrl(ANM_TYPE_BCK)->setFrame(0.0f);
@@ -710,7 +714,8 @@ void TTelesa::initItemAttacker(THitActor* param_1)
 	setTypeNormal();
 	mSpine->initWith(&TNerveTelesaAttackMario::theNerve());
 	mDampenedGroundHeight = SMS_GetMarioGrLevel() - 50.0f;
-	mRotation             = param_1->mRotation;
+	TLiveActor& actor     = *(TLiveActor*)param_1;
+	mRotation             = actor.mRotation;
 
 	setFlyParam(1.0f);
 	unk150 &= ~0x40;
@@ -730,14 +735,14 @@ void TTelesa::setAttacker()
 	mSpine->initWith(&TNerveTelesaAttackMario::theNerve());
 	setGoalPath(TPathNode(SMS_GetMarioPos()));
 	unk1C8 = 0;
-	offHitFlag(HIT_FLAG_UNK10000000);
+	offHitFilter(HIT_CATEGORY_ENEMY);
 	unk150 &= ~0x40;
 	moveObject();
 }
 
 bool TTelesa::isCollidMove(THitActor* param_1)
 {
-	return param_1->mActorType == 0x10000020 ? false : true;
+	return param_1->mActorType == ACTOR_TYPE_EFFECT_OBJ ? false : true;
 }
 
 // TODO: this FEELS real but it's 4 bytes too big!!!
@@ -774,11 +779,9 @@ void TTelesa::setFirstAttackPoint()
 	JGeometry::TVec3<f32> pos = mPosition;
 
 	// TODO: probably done via TRotation calls? Why is is all so inlined ;(
-	f32 s = MsSin(mRotation.y);
-	f32 c = MsCos(mRotation.y);
-
-	pos.x += c * 1000.0f;
-	pos.z += s * 1000.0f;
+	s16 angle = DEG2SHORTANGLE(mRotation.y);
+	pos.x += JMASSin(angle) * 1000.0f;
+	pos.z += JMASCos(angle) * 1000.0f;
 
 	setGoalPath(TPathNode(pos));
 }
@@ -1032,19 +1035,18 @@ void TMarioModokiTelesa::imitateAnm()
 
 DEFINE_NERVE(TNerveTelesaImitate, TLiveActor)
 {
-	TTelesa* self = (TTelesa*)spine->getBody();
+	TSharedParts* imitatedItem = ((TTelesa*)spine->getBody())->mImitatedBmd;
+	TTelesa* self              = (TTelesa*)spine->getBody();
 
-	TSharedParts* imitatedItem = self->mImitatedBmd;
-
-	if (gpApplication.mCurrArea.unk0 != 7
-	    && gpApplication.mCurrArea.unk0 != 14) {
+	if (SMSGetApplication()->mCurrArea.getStage() != 7
+	    && SMSGetApplication()->mCurrArea.getStage() != 14) {
 		if (spine->getTime() == 0 && imitatedItem != nullptr) {
 			((TMarioModokiTelesa*)self)->imitateAnm();
 			imitatedItem->getMActor()->setBckFromIndex(0);
 		}
 
 		if (spine->getTime() > 500) {
-			self->onHitFlag(HIT_FLAG_NO_COLLISION);
+			self->onHitFilter(HIT_FILTER_NO_COLLISION);
 			self->onLiveFlag(LIVE_FLAG_DEAD);
 		}
 
@@ -1054,7 +1056,7 @@ DEFINE_NERVE(TNerveTelesaImitate, TLiveActor)
 	self->walkBehavior(3, 1.0f);
 
 	if (spine->getTime() == 10) {
-		self->setGoalPathMario();
+		self->setGoalPath(TPathNode((THitActor*)gpMarioAddress));
 
 		if (imitatedItem != nullptr) {
 			((TMarioModokiTelesa*)self)->imitateAnm();
@@ -1072,25 +1074,23 @@ DEFINE_NERVE(TNerveTelesaImitate, TLiveActor)
 	if (!self->checkLiveFlag(LIVE_FLAG_DEAD)) {
 		// TODO: this is an inline
 
-		if (!self->resetBaseGround()) {
-			if (self->isInSight(SMS_GetMarioPos(), 0.0f, 0.0f, searchAware))
-				return false;
+		if (self->resetBaseGround()
+		    || self->isInSight(SMS_GetMarioPos(), 0.0f, 0.0f, searchAware)) {
+			gpMarioParticleManager->emitAndBindToPosPtr(
+			    PARTICLE_MS_TLS_CHANGE, &self->mPosition, 0, nullptr);
+
+			self->mImitatedBmd = nullptr;
+			self->setFlyParam(1.0f);
+
+			spine->pushAfterCurrent(&TNerveWalkerGraphWander::theNerve());
+
+			SMSGetMSound()->startSoundActor(MSD_SE_EN_KM_TELSA_REVEAL,
+			                                &self->mPosition, 0, nullptr, 0, 4);
+
+			// end of inline
+
+			return true;
 		}
-
-		gpMarioParticleManager->emitAndBindToPosPtr(0xCD, &self->mPosition, 0,
-		                                            nullptr);
-
-		self->mImitatedBmd = nullptr;
-		self->setFlyParam(1.0f);
-
-		spine->pushAfterCurrent(&TNerveWalkerGraphWander::theNerve());
-
-		SMSGetMSound()->startSoundActor(MSD_SE_EN_KM_TELSA_REVEAL,
-		                                &self->mPosition, 0, nullptr, 0, 4);
-
-		// end of inline
-
-		return true;
 	}
 
 	return false;
@@ -1106,7 +1106,7 @@ DEFINE_NERVE(TNerveTelesaDie, TLiveActor)
 			if (self->mFadeState == TTelesa::FADE_STATE_INVISIBLE
 			    || self->mFadeState == TTelesa::FADE_STATE_FADE_OUT)
 				self->mFadeState = TTelesa::FADE_STATE_FADE_IN;
-			self->onHitFlag(HIT_FLAG_NO_COLLISION);
+			self->onHitFilter(HIT_FILTER_NO_COLLISION);
 		}
 
 		if (self->getUnk184()) {
@@ -1124,7 +1124,7 @@ DEFINE_NERVE(TNerveTelesaDie, TLiveActor)
 		self->onLiveFlag(LIVE_FLAG_UNK8);
 		self->offLiveFlag(TSmallEnemy::LIVE_FLAG_MELT_ON_DEATH);
 		self->mHolder = nullptr;
-		self->onHitFlag(HIT_FLAG_NO_COLLISION);
+		self->onHitFilter(HIT_FILTER_NO_COLLISION);
 		self->stopAnmSound();
 		spine->reset();
 		spine->setNext(&TNerveTelesaDie::theNerve());
@@ -1152,18 +1152,21 @@ DEFINE_NERVE(TNerveTelesaFreeze, TLiveActor)
 
 	if (spine->getTime() == 0) {
 		self->setBckAnm(5);
-		self->setGoalPathMario();
+		self->setGoalPath(TPathNode((THitActor*)gpMarioAddress));
 	} else if (self->checkCurAnmEnd(0)) {
 		if (self->isBckAnm(4)) {
 			if (!self->isFlying()) {
 				self->unk1C8 = 0;
-				self->offHitFlag(HIT_FLAG_UNK10000000);
+				self->offHitFilter(HIT_CATEGORY_ENEMY);
 				return true;
 			}
-		} else if (self->resetBaseGround() || self->isBckAnm(5))
-			self->setBckAnm(3);
-		else
-			self->setBckAnm(4);
+		} else {
+			bool reset = self->resetBaseGround();
+			if (reset || self->isBckAnm(5))
+				self->setBckAnm(3);
+			else
+				self->setBckAnm(4);
+		}
 	}
 
 	self->reduceFlyForce();
@@ -1264,7 +1267,7 @@ DEFINE_NERVE(TNerveKageMarioModokiWait, TLiveActor)
 		}
 
 		self->onLiveFlag(LIVE_FLAG_DEAD);
-		self->onHitFlag(HIT_FLAG_NO_COLLISION);
+		self->onHitFilter(HIT_FILTER_NO_COLLISION);
 		TTelesa* telesa = (TTelesa*)gpConductor->makeOneEnemyAppear(
 		    self->mPosition, "テレサマネージャー", 1);
 

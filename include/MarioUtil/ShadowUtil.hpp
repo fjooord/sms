@@ -27,7 +27,7 @@ public:
 	    , mRotationY(0.0f)
 	    , mCameraDistSq(0.0f)
 	    , mShadowType(SHADOW_TYPE_CIRCLE)
-	    , mNeedsGroundCheck(1)
+	    , mNeedsGroundCheck(true)
 	    , mActorType(0)
 	{
 		mPosition.set(0.0f, 0.0f, 0.0f);
@@ -40,7 +40,7 @@ public:
 	/* 0x14 */ f32 mRotationY;
 	/* 0x18 */ f32 mCameraDistSq;
 	/* 0x1C */ u8 mShadowType;
-	/* 0x1D */ u8 mNeedsGroundCheck;
+	/* 0x1D */ bool mNeedsGroundCheck;
 	/* 0x20 */ u32 mActorType;
 };
 
@@ -183,8 +183,22 @@ public:
 	void drawShadowVolume(bool, TAlphaShadowQuad*);
 	void drawShadowGD(u32, JDrama::TGraphics*);
 	void drawShadow(u32, JDrama::TGraphics*);
-	void request(const TCircleShadowRequest&, u32);
-	void forceRequest(const TCircleShadowRequest&, u32);
+	/**
+	 * @brief Requests for a shadow to be drawn on this frame.
+	 * @details Shadows are culled out aggressively via different criteria. Use
+	 * forceRequest to bypass culling.
+	 *
+	 * @param request Description of the shadow.
+	 * @param actor_type Type of the requesting actor.
+	 */
+	void request(const TCircleShadowRequest& request, u32 actor_type);
+	/**
+	 * @brief Requests for a shadow to be drawn on this frame bypassing culling.
+	 *
+	 * @param request Description of the shadow.
+	 * @param actor_type Type of the requesting actor.
+	 */
+	void forceRequest(const TCircleShadowRequest& request, u32 actor_type);
 	void calcVtx();
 
 public:

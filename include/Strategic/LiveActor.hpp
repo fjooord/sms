@@ -1,6 +1,7 @@
 #ifndef STRATEGIC_LIVE_ACTOR_HPP
 #define STRATEGIC_LIVE_ACTOR_HPP
 
+#include <version.h>
 #include <Strategic/TakeActor.hpp>
 #include <Strategic/LiveManager.hpp>
 #include <Strategic/Nerve.hpp>
@@ -8,6 +9,7 @@
 // TODO: where should this live?
 struct TLodAnmIndex;
 class MActor;
+template <class T> class TSpcTypedInterp;
 class TMActorKeeper;
 class MAnmSound;
 class JKRFileLoader;
@@ -18,37 +20,43 @@ class TBinder;
 class TMapCollisionManager;
 
 enum {
-	LIVE_FLAG_DEAD        = 0x1,
-	LIVE_FLAG_HIDDEN      = 0x2,
-	LIVE_FLAG_CLIPPED_OUT = 0x4,
-	LIVE_FLAG_UNK8        = 0x8,
-	LIVE_FLAG_UNK10       = 0x10,
-	LIVE_FLAG_UNK20       = 0x20,
-	LIVE_FLAG_UNK40       = 0x40,
-	LIVE_FLAG_AIRBORNE    = 0x80,
-	LIVE_FLAG_UNK100      = 0x100,
-	LIVE_FLAG_UNK200      = 0x200,
-	LIVE_FLAG_UNK400      = 0x400,
-	LIVE_FLAG_UNK800      = 0x800,
-	LIVE_FLAG_UNK1000     = 0x1000,
-	LIVE_FLAG_UNK2000     = 0x2000,
-	LIVE_FLAG_UNK4000     = 0x4000,
-	LIVE_FLAG_UNK8000     = 0x8000,
+	LIVE_FLAG_DEAD         = 0x1,
+	LIVE_FLAG_HIDDEN       = 0x2,
+	LIVE_FLAG_CLIPPED_OUT  = 0x4,
+	LIVE_FLAG_UNK8         = 0x8,
+	LIVE_FLAG_UNK10        = 0x10,
+	LIVE_FLAG_UNK20        = 0x20,
+	LIVE_FLAG_UNK40        = 0x40,
+	LIVE_FLAG_AIRBORNE     = 0x80,
+	LIVE_FLAG_UNK100       = 0x100,
+	LIVE_FLAG_UNK200       = 0x200,
+	LIVE_FLAG_FORCE_SHADOW = 0x400,
+	LIVE_FLAG_UNK800       = 0x800,
+	LIVE_FLAG_UNK1000      = 0x1000,
+	LIVE_FLAG_UNK2000      = 0x2000,
+#ifdef VERSION_GMSP01
+	LIVE_FLAG_CALC_INT_FRAME = 0x4000,
+#endif
+	LIVE_FLAG_UNK4000  = VERSION_SELECT(GMSJ01(0x4000), GMSP01(0x8000)),
+	LIVE_FLAG_UNK8000  = VERSION_SELECT(GMSJ01(0x8000), GMSP01(0x10000)),
+	LIVE_FLAG_UNK10000 = VERSION_SELECT(GMSJ01(0x10000), GMSP01(0x20000)),
 	// WARNING: some flag values are overloaded between derived classes. E.g.
 	// LIVE_FLAG_UNK10000 means different things for NPCs and small enemies.
 	// Be careful about placing stuff here -- it might belong to derived classes
 	// instead.
-	LIVE_FLAG_UNK20000    = 0x20000,
-	LIVE_FLAG_UNK40000    = 0x40000,
-	LIVE_FLAG_UNK80000    = 0x80000,
-	LIVE_FLAG_UNK100000   = 0x100000,
-	LIVE_FLAG_UNK200000   = 0x200000,
-	LIVE_FLAG_UNK400000   = 0x400000,
-	LIVE_FLAG_UNK1000000  = 0x1000000,
-	LIVE_FLAG_UNK2000000  = 0x2000000,
-	LIVE_FLAG_UNK4000000  = 0x4000000,
-	LIVE_FLAG_UNK8000000  = 0x8000000,
-	LIVE_FLAG_UNK10000000 = 0x10000000,
+	LIVE_FLAG_UNK20000   = VERSION_SELECT(GMSJ01(0x20000), GMSP01(0x40000)),
+	LIVE_FLAG_UNK40000   = VERSION_SELECT(GMSJ01(0x40000), GMSP01(0x80000)),
+	LIVE_FLAG_UNK80000   = VERSION_SELECT(GMSJ01(0x80000), GMSP01(0x100000)),
+	LIVE_FLAG_UNK100000  = VERSION_SELECT(GMSJ01(0x100000), GMSP01(0x200000)),
+	LIVE_FLAG_UNK200000  = VERSION_SELECT(GMSJ01(0x200000), GMSP01(0x400000)),
+	LIVE_FLAG_UNK400000  = VERSION_SELECT(GMSJ01(0x400000), GMSP01(0x800000)),
+	LIVE_FLAG_UNK1000000 = VERSION_SELECT(GMSJ01(0x1000000), GMSP01(0x2000000)),
+	LIVE_FLAG_UNK2000000 = VERSION_SELECT(GMSJ01(0x2000000), GMSP01(0x4000000)),
+	LIVE_FLAG_UNK4000000 = VERSION_SELECT(GMSJ01(0x4000000), GMSP01(0x8000000)),
+	LIVE_FLAG_UNK8000000
+	= VERSION_SELECT(GMSJ01(0x8000000), GMSP01(0x10000000)),
+	LIVE_FLAG_UNK10000000
+	= VERSION_SELECT(GMSJ01(0x10000000), GMSP01(0x20000000)),
 };
 
 class TLiveActor : public TTakeActor {
@@ -62,13 +70,40 @@ public:
 	virtual Mtx* getRootJointMtx() const;
 	virtual void init(TLiveManager*);
 	virtual void calcRootMatrix();
+	/**
+	 * @brief Updates the collision geometry for the actor.
+	 * @note Ground here means "terrain in general", not necessarily the ground
+	 * plane. Walls and roofs are included too.
+	 */
 	virtual void setGroundCollision();
+	/**
+	 * @brief Runs the AI for the actor via it's spine. Any updates to the
+	 * actor's position or rotation should be applied here, within nerves.
+	 */
 	virtual void control();
+	/**
+	 * @brief Integrates the velocity, applies it to the current frame's
+	 * position delta and binds the movement to a range allowed by the scene's
+	 * collision geometry.
+	 */
 	virtual void bind();
+	/**
+	 * @brief Does one simulation step for the actor, gathering various sources
+	 * of motion and integrating it's velocity, position and rotation.
+	 * Triggered by CUE_MOVE.
+	 */
 	virtual void moveObject();
+	/**
+	 * @brief Requests a shadow to be drawn for this actor on this frame.
+	 * Triggered by CUE_CALC_VIEW
+	 */
 	virtual void requestShadow();
-	virtual void drawObject(JDrama::TGraphics*);
-	virtual void performOnlyDraw(u32, JDrama::TGraphics*);
+	/**
+	 * @brief Draws the actor's model into it's display lists.
+	 * Triggered on CUE_ENTRY.
+	 */
+	virtual void drawObject(JDrama::TGraphics* graphics);
+	virtual void performOnlyDraw(u32 cue, JDrama::TGraphics* graphics);
 	virtual u32 getShadowType();
 	virtual void kill();
 	virtual f32 getGravityY() const;
@@ -124,7 +159,7 @@ public:
 	void getNextFramePosition(JGeometry::TVec3<f32>& result)
 	{
 		result = mPosition;
-		result.add(mLinearVelocity);
+		result.add(mPositionDelta);
 		// It's not clear why we copy mVelocity to a local variable first,
 		// but it matches what TWireBinder::bind does.
 		// We can revisit later if needed.
@@ -138,11 +173,18 @@ public:
 		mVelocity.set(x, y, z);
 		offLiveFlag(LIVE_FLAG_UNK10);
 	}
-	void setLinearVelocity(const JGeometry::TVec3<f32>& v)
+	void setPositionDelta(const JGeometry::TVec3<f32>& v)
 	{
-		mLinearVelocity = v;
+		mPositionDelta = v;
 	}
-	TLodAnm* getLodAnm() { return unkD0; }
+	TLodAnm* getLodAnm() { return mLodAnm; }
+	const char* getBas(int idx) const
+	{
+		const char** basTable = getBasNameTable();
+		if (!basTable)
+			return nullptr;
+		return basTable[idx];
+	}
 
 public:
 	/* 0x70 */ TLiveManager* mManager;
@@ -153,11 +195,9 @@ public:
 	/* 0x84 */ const char* mAnmSoundPath;
 	/* 0x88 */ TBinder* mBinder;
 	/* 0x8C */ TSpineBase<TLiveActor>* mSpine;
-	/* 0x90 */ void* unk90;
-	// TODO: Analyze mLinearVelocity vs mVelocity some more
-	// and decide on better names
-	/* 0x94 */ JGeometry::TVec3<f32> mLinearVelocity;
-	/* 0xA0 */ JGeometry::TVec3<f32> mAngularVelocity;
+	/* 0x90 */ TSpcTypedInterp<TLiveActor>* unk90;
+	/* 0x94 */ JGeometry::TVec3<f32> mPositionDelta;
+	/* 0xA0 */ JGeometry::TVec3<f32> mRotationDelta;
 	/* 0xAC */ JGeometry::TVec3<f32> mVelocity;
 	/* 0xB8 */ f32 mScaledBodyRadius;
 	/* 0xBC */ f32 mBodyRadius;
@@ -165,7 +205,7 @@ public:
 	/* 0xC4 */ const TBGCheckData* mGroundPlane;
 	/* 0xC8 */ f32 mGroundHeight;
 	/* 0xCC */ f32 mGravity;
-	/* 0xD0 */ TLodAnm* unkD0;
+	/* 0xD0 */ TLodAnm* mLodAnm;
 	/* 0xD4 */ const TLiveActor* mGroundActor;
 	/* 0xD8 */ JGeometry::TVec3<f32> mRidePos;
 	/* 0xE4 */ f32 mGroundActorYaw;

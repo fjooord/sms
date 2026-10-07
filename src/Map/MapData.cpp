@@ -9,7 +9,8 @@ f32 TBGCheckData::getActiveJumpPower() const
 {
 	// TODO: inlines...
 	char trash[0x4];
-	if (getActor() != nullptr && getActor()->isActorType(0x40000039))
+	if (getActor() != nullptr
+	    && getActor()->isActorType(ACTOR_TYPE_BANANA_TREE))
 		return TMapObjTree::mBananaTreeJumpPower;
 
 	return mData;
@@ -17,7 +18,7 @@ f32 TBGCheckData::getActiveJumpPower() const
 
 u32 TBGCheckData::getPlaneType()
 {
-	if (mBGType == 0x801 ? true : false)
+	if (isEverythingButMapObjectsThrough())
 		return 0;
 
 	if (mNormal.y > 0.2f)
@@ -27,9 +28,9 @@ u32 TBGCheckData::getPlaneType()
 		return 1;
 
 	if (mNormal.x < -0.707f || 0.707f < mNormal.x)
-		mFlags |= 0x8;
+		mFlags |= BG_CHECK_FLAG_X_FACING;
 	else
-		mFlags &= ~0x8;
+		mFlags &= ~BG_CHECK_FLAG_X_FACING;
 
 	return 2;
 }

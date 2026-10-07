@@ -19,7 +19,7 @@ void TWoodBarrel::put()
 {
 	TMapObjGeneral::put();
 	if (mGroundPlane->getActor() != nullptr
-	    && mGroundPlane->getActor()->isActorType(0x4000007b)) {
+	    && mGroundPlane->getActor()->isActorType(ACTOR_TYPE_MAP_OBJECT_UNK7B)) {
 		kill();
 		return;
 	}
@@ -36,7 +36,7 @@ void TWoodBarrel::put()
 void TWoodBarrel::hold(TTakeActor* param_1)
 {
 	TMapObjGeneral::hold(param_1);
-	if (isActorType(0x4000005c))
+	if (isActorType(ACTOR_TYPE_BARREL_OIL))
 		startStateTimer(mBreakTime);
 }
 
@@ -58,7 +58,7 @@ void TWoodBarrel::kill()
 	unk148->mPos.value = vec;
 	gpModelWaterManager->emitRequest(*unk148);
 	if (mHolder) {
-		mHolder->receiveMessage(this, HIT_MESSAGE_UNK8);
+		mHolder->receiveMessage(this, HIT_MESSAGE_DETACH);
 		mHolder = nullptr;
 	}
 }
@@ -107,8 +107,8 @@ void TWoodBarrel::touchPlayer(THitActor* param_1)
 
 void TWoodBarrel::touchActor(THitActor* param_1)
 {
-	if (param_1->checkActorType(0x4000000)
-	    || param_1->checkActorType(0x40000000)) {
+	if (param_1->isHitCategory(HIT_CATEGORY_NPC)
+	    || param_1->isHitCategory(HIT_CATEGORY_MAP_OBJECT)) {
 		param_1->receiveMessage(this, HIT_MESSAGE_ATTACK);
 		kill();
 	} else {
@@ -130,7 +130,7 @@ BOOL TWoodBarrel::receiveMessage(THitActor* sender, u32 message)
 void TWoodBarrel::control()
 {
 	TMapObjGeneral::control();
-	if (isActorType(0x4000005c) && isState(STATE_HOLDING)
+	if (isActorType(ACTOR_TYPE_BARREL_OIL) && isState(STATE_HOLDING)
 	    && !isStateTimerEngaged())
 		kill();
 }

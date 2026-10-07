@@ -277,10 +277,7 @@ void CPolarSubCamera::changeCamModeSub_(int mode, int tween_frames, bool force)
 		bVar11 = true;
 	}
 
-	if (!force && mMode == mode)
-		return;
-
-	if (tween_frames < 0)
+	if ((!force && mMode == mode) || tween_frames < 0)
 		return;
 
 	if (tween_frames == 0)
@@ -348,11 +345,11 @@ void CPolarSubCamera::changeCamModeSub_(int mode, int tween_frames, bool force)
 				break;
 			case CAMERA_MODE_FIX_H:
 			case CAMERA_MODE_DEFINITE_H:
-				mCurrentTarget.mYaw = *gpMarioAngleY - 0x8000;
+				mCurrentTarget.mYaw = SMS_GetMarioAngleY() - 0x8000;
 				break;
 			case CAMERA_MODE_FIX_I:
 			case CAMERA_MODE_DEFINITE_I:
-				mCurrentTarget.mYaw = *gpMarioAngleY - 0x8000;
+				mCurrentTarget.mYaw = SMS_GetMarioAngleY() - 0x8000;
 				warpPosAndAt(mCurrentTarget.unk28, mCurrentTarget.mYaw);
 			}
 		}
@@ -454,7 +451,7 @@ void CPolarSubCamera::execFrontRotate_()
 	    && SMS_GetMarioStatus() != MARIO_STATUS_HIP_DROP) {
 		unk64 &= ~CAMERA_FLAG_UNK10;
 		unk64 |= CAMERA_FLAG_UNK4;
-		unk274 = *gpMarioAngleY - 0x8000;
+		unk274 = SMS_GetMarioAngleY() - 0x8000;
 		if (unk120->checkFrameMeaning(TMarioGamePad::MEANING_Y)) {
 			unk276 = mSaveEx->mYButtonRotateChase.get();
 			unk64 |= CAMERA_FLAG_UNK8;
@@ -497,8 +494,8 @@ bool CPolarSubCamera::isChangeToBossGesoCamera_() const
 	bool result     = false;
 	THitActor* held = gpMarioOriginal->getHeldObject();
 	if (held != nullptr
-	    && (held->getActorType() == 0x8000006
-	        || held->getActorType() == 0x8000008)) {
+	    && (held->getActorType() == ACTOR_TYPE_BOSS_GESSO_TENTACLE
+	        || held->getActorType() == ACTOR_TYPE_BOSS_UNK8)) {
 		TBossGesso* gesso = static_cast<TBossGesso*>(unk2A8);
 		if (gesso != nullptr && (gesso->beakHeld() || gesso->tentacleHeld()))
 			result = true;
@@ -512,7 +509,8 @@ bool CPolarSubCamera::isChangeToCancanCamera_() const
 	bool result = false;
 
 	if (gpMarioOriginal->getHeldObject() != nullptr
-	    && gpMarioOriginal->getHeldObject()->getActorType() == 0x10000028)
+	    && gpMarioOriginal->getHeldObject()->getActorType()
+	           == ACTOR_TYPE_FIRE_WANWAN_TAIL_HIT)
 		result = true;
 
 	return result;
@@ -524,8 +522,8 @@ bool CPolarSubCamera::isChangeToParallelCameraByMoveBG_() const
 	THitActor* holder = gpMarioOriginal->getHolder();
 	if (holder != nullptr) {
 		switch (holder->getActorType()) {
-		case 0x400000BB:
-		case 0x40000049:
+		case ACTOR_TYPE_ELASTIC_CODE:
+		case ACTOR_TYPE_FLUFF:
 			iVar5 = true;
 			break;
 		}
@@ -534,13 +532,13 @@ bool CPolarSubCamera::isChangeToParallelCameraByMoveBG_() const
 		const TLiveActor* grActor = SMS_GetMarioGrPlane()->getActor();
 		if (grActor != nullptr) {
 			switch (grActor->getActorType()) {
-			case 0x4000012E:
+			case ACTOR_TYPE_FERRIS_GONDOLA:
 				iVar5 = true;
 				break;
-			case 0x400000A5:
-			case 0x4000009C:
-			case 0x40000249:
-			case 0x4000022E:
+			case ACTOR_TYPE_LEAF_BOAT_ROTTEN:
+			case ACTOR_TYPE_LEAF_BOAT:
+			case ACTOR_TYPE_SWING_BOARD:
+			case ACTOR_TYPE_MUDDY_BOAT:
 				if (SMS_IsMarioTouchGround4cm())
 					iVar5 = true;
 				break;
@@ -556,7 +554,7 @@ bool CPolarSubCamera::isChangeToParallelCameraCByMoveBG_() const
 	bool result = false;
 
 	const TLiveActor* grActor
-	    = SMS_GetGroundActor(SMS_GetMarioGrPlane(), 0x4000012F);
+	    = SMS_GetGroundActor(SMS_GetMarioGrPlane(), ACTOR_TYPE_VIKING);
 	if (grActor != nullptr)
 		result = true;
 
@@ -581,7 +579,7 @@ void CPolarSubCamera::execCameraModeChangeProc_(int param_1)
 		return;
 
 	if (unk64 & CAMERA_FLAG_NOTICE_ACTIVE)
-		execNoticeOnOffProc_(NOTICE_MODE_UNK0);
+		execNoticeOnOffProc_(NOTICE_MODE_UNK1);
 
 	int prevMode = mMode;
 
@@ -610,22 +608,16 @@ void CPolarSubCamera::execCameraModeChangeProc_(int param_1)
 			if (unk64 & CAMERA_FLAG_UNK10) {
 				unk64 &= ~CAMERA_FLAG_UNK10;
 				doLButtonCameraOn_();
-			} else if (unk120->checkFrameMeaning(
-			               TMarioGamePad::MEANING_Y
-			               | TMarioGamePad::MEANING_CAM_L)) {
-				bool doCheck = true;
-				if (unk120->checkFrameMeaning(TMarioGamePad::MEANING_Y)) {
-					if (unk282 != 0)
-						doCheck = false;
-					else
-						execNoticeOnOffProc_((EnumNoticeOnOffMode)2);
-				}
-				if (doCheck) {
-					if (unk64 & CAMERA_FLAG_NOTICE_ACTIVE) {
-						doLButtonCameraOn_();
-					} else if (!isLButtonCameraInbetween()) {
-						execFrontRotate_();
-					}
+			} else if (unk120->checkFrameMeaning(TMarioGamePad::MEANING_Y
+			                                     | TMarioGamePad::MEANING_CAM_L)
+			           && (!unk120->checkFrameMeaning(TMarioGamePad::MEANING_Y)
+			               || unk282 == 0)) {
+				if (unk120->checkFrameMeaning(TMarioGamePad::MEANING_Y))
+					execNoticeOnOffProc_(NOTICE_MODE_UNK2);
+				if (unk64 & CAMERA_FLAG_NOTICE_ACTIVE) {
+					doLButtonCameraOn_();
+				} else if (!isLButtonCameraInbetween()) {
+					execFrontRotate_();
 				}
 			}
 		}
@@ -672,7 +664,8 @@ void CPolarSubCamera::execCameraModeChangeProc_(int param_1)
 			newMode = CAMERA_MODE_SURFING;
 		} else if ((status & MARIO_STATUS_FLAG_UNK20000000)
 		           && gpMarioOriginal->unk2C0 != nullptr
-		           && gpMarioOriginal->unk2C0->getActorType() == 0x4000006C) {
+		           && gpMarioOriginal->unk2C0->getActorType()
+		                  == ACTOR_TYPE_RAIL_FENCE) {
 			newMode = CAMERA_MODE_RAIL_FENCE;
 		} else {
 			bool isFenceish = false;
@@ -719,13 +712,14 @@ void CPolarSubCamera::execCameraModeChangeProc_(int param_1)
 				bool isCancan = false;
 				if (gpMarioOriginal->getHeldObject() != nullptr
 				    && gpMarioOriginal->getHeldObject()->getActorType()
-				           == 0x10000028)
+				           == ACTOR_TYPE_FIRE_WANWAN_TAIL_HIT)
 					isCancan = true;
 				if (isCancan) {
 					newMode = CAMERA_MODE_CANCAN;
 				} else {
 					bool onPlatform_2C9 = false;
-					if (SMS_GetGroundActor(SMS_GetMarioGrPlane(), 0x400002C9))
+					if (SMS_GetGroundActor(SMS_GetMarioGrPlane(),
+					                       ACTOR_TYPE_SAND_BIRD_BLOCK))
 						onPlatform_2C9 = true;
 					if (onPlatform_2C9) {
 						newMode = CAMERA_MODE_SAND_BIRD;
@@ -737,7 +731,7 @@ void CPolarSubCamera::execCameraModeChangeProc_(int param_1)
 					} else {
 						bool onPlatform_12F = false;
 						if (SMS_GetGroundActor(SMS_GetMarioGrPlane(),
-						                       0x4000012F))
+						                       ACTOR_TYPE_VIKING))
 							onPlatform_12F = true;
 						if (onPlatform_12F) {
 							newMode = CAMERA_MODE_PARALLEL_C;

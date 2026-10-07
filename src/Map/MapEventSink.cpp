@@ -87,7 +87,7 @@ void TMapEventSink::rising()
 	J3DTransformInfo& info = unk30->getTransformInfo();
 	info.mTranslate.y += unk3C;
 	unk30->setTransformInfo(info);
-	unk1C->mActor->mModel->calc();
+	unk1C->getActor()->getModel()->calc();
 }
 
 bool TMapEventSink::control()
@@ -134,13 +134,15 @@ void TMapEventSink::startControl()
 	info.mTranslate.y -= dVar4;
 	unk30->setTransformInfo(info);
 
-	unk1C->mActor->mModel->calc();
+	J3DModel* model = unk1C->getActor()->getModel();
+	model->calc();
 	int iVar3 = (unk40 - unk44) - unk48;
 	unk3C     = dVar4 / iVar3;
 	unk4C     = unk40;
 
-	unk5C[mRaisingBuildingIdx]->moveTrans(JGeometry::TVec3<f32>(
-	    info.mTranslate.x, info.mTranslate.y, info.mTranslate.z));
+	JGeometry::TVec3<f32> trans(info.mTranslate.x, info.mTranslate.y,
+	                            info.mTranslate.z);
+	unk5C[mRaisingBuildingIdx]->setUpTrans(trans);
 }
 
 void TMapEventSink::initBuilding(int index, JSUMemoryInputStream& stream)
@@ -411,9 +413,8 @@ void TMapEventSinkShadowMario::loadAfter()
 	for (int i = 0; i < mBuildingNum; ++i) {
 		unk64[i] = static_cast<JDrama::TPlacement*>(
 		    JDrama::TNameRefGen::search(unk68[i]));
-		TJointObj* obj = getBuilding(i);
-		unk64[i]->mPosition.y
-		    -= obj->getJoint()->getMax().y - obj->getJoint()->getMin().y;
+		J3DJoint* joint = getBuilding(i)->getJoint();
+		unk64[i]->mPosition.y -= joint->getMax().y - joint->getMin().y;
 	}
 }
 

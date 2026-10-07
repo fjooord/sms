@@ -56,7 +56,7 @@ public:
 	virtual void loadAfter();
 	virtual BOOL hasMapCollision() const { return true; }
 
-	J3DMaterialTable* loadMatTable(const char*);
+	static J3DMaterialTable* loadMatTable(const char*);
 	void initDrawBuffer();
 	void entryStaticDrawBufferSun(J3DModel*);
 	void entryStaticDrawBufferShadow(J3DModel*);
@@ -74,6 +74,8 @@ public:
 		return mDrawBufferAfterIndirectXlu->getDrawBuffer();
 	}
 	const JGeometry::TVec3<f32>& getUnk44() { return unk44; }
+
+	SDLModelData* getSurfGessoModelData() { return mSurfGessoModelData; }
 
 public:
 	/* 0x40 */ MActorAnmData* unk40;

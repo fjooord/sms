@@ -54,7 +54,7 @@ BOOL TMario::barWait()
 		                                nullptr, 0, 4);
 	}
 
-	if (mHolder->getActorType() == 0x400000bb) {
+	if (mHolder->getActorType() == ACTOR_TYPE_ELASTIC_CODE) {
 		if (unk108->mStickV <= 0.0f) {
 			mPosition.y -= 2.0f;
 			mHolderHeightDiff = mPosition.y - mHolder->mPosition.y;
@@ -66,14 +66,14 @@ BOOL TMario::barWait()
 		}
 	}
 
-	if (mHolder->getActorType() == 0x40000039) {
+	if (mHolder->getActorType() == ACTOR_TYPE_BANANA_TREE) {
 		if (mHolderHeightDiff > 500.0f) {
 			mHolderHeightDiff = 500.0f;
 			mPosition.y       = mHolder->mPosition.y + mHolderHeightDiff;
 		}
 	}
 
-	if (mHolder->getActorType() == 0x40000246) {
+	if (mHolder->getActorType() == ACTOR_TYPE_MONTE_GOAL_FLAG) {
 		u8 map = gpMarDirector->getCurrentMap();
 		if (map == 8) {
 			if (mHolderHeightDiff > 750.0f) {
@@ -145,14 +145,14 @@ BOOL TMario::barClimb()
 		setAnimation(ANIM_TREE_CLIMB, v * rate + 1.0f);
 	}
 
-	if (mHolder->getActorType() == 0x40000039) {
+	if (mHolder->getActorType() == ACTOR_TYPE_BANANA_TREE) {
 		if (mHolderHeightDiff > 500.0f) {
 			mHolderHeightDiff = 500.0f;
 			mPosition.y       = mHolder->mPosition.y + mHolderHeightDiff;
 		}
 	}
 
-	if (mHolder->getActorType() == 0x40000246) {
+	if (mHolder->getActorType() == ACTOR_TYPE_MONTE_GOAL_FLAG) {
 		u8 state = gpMarDirector->mMap;
 		if (state == 8) {
 			if (mHolderHeightDiff > 750.0f) {
@@ -286,8 +286,9 @@ BOOL TMario::roofCommonEvents()
 	if (mInput & 0x2) {
 		const TLiveActor* actor = mRoofPlane->mActor;
 		if (actor != nullptr) {
-			((THitActor*)actor)->receiveMessage(this, 3);
-			if (actor->mActorType == 0x4000006a) {
+			((THitActor*)actor)
+			    ->receiveMessage(this, HIT_MESSAGE_SUPER_HIP_DROP);
+			if (actor->mActorType == ACTOR_TYPE_FENCE_REVOLVE_INNER) {
 				emitParticle(PARTICLE_MS_M_AMIATTACK, &mHeadPos);
 				rumbleStart(0x15, mMotorParams.mMotorWall.get());
 				return changePlayerStatus(MARIO_STATUS_KICK_ROOF_ROLL_UP, 0,
@@ -728,7 +729,7 @@ BOOL TMario::wireWait()
 
 	if (checkFlag(MARIO_FLAG_UNK100) == true) {
 		if (mWireSag <= 0.0f) {
-			((THitActor*)mHolder)->receiveMessage(this, 8);
+			((THitActor*)mHolder)->receiveMessage(this, HIT_MESSAGE_DETACH);
 			mHolder  = nullptr;
 			BOOL ret = changePlayerStatus(MARIO_STATUS_WIRE_JUMP, 0, false);
 			setPlayerVelocity(0.0f);
@@ -750,7 +751,7 @@ BOOL TMario::wireWait()
 		}
 	}
 
-	if (mInput & 0x10000) {
+	if (mInput & 0x8000) {
 		mWireBounceVel = 5.0f;
 		return changePlayerStatus(MARIO_STATUS_WIRE_WAIT_TO_HANG, 0, false);
 	}
@@ -798,7 +799,7 @@ BOOL TMario::wireSWait()
 
 	if (checkFlag(MARIO_FLAG_UNK100) == true) {
 		if (mWireSag < 0.0f) {
-			((THitActor*)mHolder)->receiveMessage(this, 8);
+			((THitActor*)mHolder)->receiveMessage(this, HIT_MESSAGE_DETACH);
 			mHolder  = nullptr;
 			BOOL ret = changePlayerStatus(MARIO_STATUS_WIRE_JUMP, 0, false);
 			setPlayerVelocity(0.0f);
@@ -925,7 +926,7 @@ BOOL TMario::wireHanging()
 	}
 
 	if (mInput & 0x8000) {
-		((THitActor*)mHolder)->receiveMessage(this, HIT_MESSAGE_UNK8);
+		((THitActor*)mHolder)->receiveMessage(this, HIT_MESSAGE_DETACH);
 		mHolder = nullptr;
 
 		return startHangLanding(MARIO_STATUS_WIRE_HANG_LAND_SAFE_DOWN);
@@ -1209,16 +1210,16 @@ void TMario::getCurrentPullParams(f32* outV, f32* outH)
 {
 	TPullParams* params = nullptr;
 	switch (mHeldObject->getActorType()) {
-	case 0x8000008:
+	case ACTOR_TYPE_BOSS_UNK8:
 		params = &mPullParamsBGBeak;
 		break;
-	case 0x8000006:
+	case ACTOR_TYPE_BOSS_GESSO_TENTACLE:
 		params = &mPullParamsBGTentacle;
 		break;
-	case 0x800000D:
+	case ACTOR_TYPE_BOSS_UNKD:
 		params = &mPullParamsBGFireWanWanBossTail;
 		break;
-	case 0x10000028:
+	case ACTOR_TYPE_FIRE_WANWAN_TAIL_HIT:
 		params = &mPullParamsFireWanWanTail;
 		break;
 	}
@@ -1239,17 +1240,17 @@ void TMario::setPullingAnm(const JGeometry::TVec3<f32>&, f32) { }
 BOOL TMario::pulling()
 {
 	if (mInput & 0x4) {
-		((THitActor*)mHeldObject)->receiveMessage(this, 8);
+		((THitActor*)mHeldObject)->receiveMessage(this, HIT_MESSAGE_DETACH);
 		mHeldObject = nullptr;
 		startVoice(MSD_SE_MV30_FRIGHT_01);
 		return changePlayerStatus(MARIO_STATUS_LANDING, 0, false);
 	}
 
-	if (!(unk108->mInput & 0x200)) {
-		((THitActor*)mHeldObject)->receiveMessage(this, 8);
+	if (!(unk108->mInput & TMarioControllerWork::B)) {
+		((THitActor*)mHeldObject)->receiveMessage(this, HIT_MESSAGE_DETACH);
 		mHeldObject = nullptr;
 		startVoice(MSD_SE_MV30_FRIGHT_01);
-		return changePlayerStatus(0xc00022f, 0, false);
+		return changePlayerStatus(MARIO_STATUS_PULL_END, 0, false);
 	}
 
 	if (mInput & 0x2) {
@@ -1303,8 +1304,11 @@ BOOL TMario::pulling()
 	default:
 		JGeometry::TVec3<f32> delta;
 		TTakeActor* heldObject = mHeldObject;
-		if ((heldObject->getActorType() == 0x8000006 ? true : false)
-		    || (heldObject->getActorType() == 0x8000008 ? true : false)) {
+		if ((heldObject->getActorType() == ACTOR_TYPE_BOSS_GESSO_TENTACLE
+		         ? true
+		         : false)
+		    || (heldObject->getActorType() == ACTOR_TYPE_BOSS_UNK8 ? true
+		                                                           : false)) {
 			delta = pos - mPrevPosition;
 		} else {
 			delta = mPosition - mPrevPosition;
@@ -1537,16 +1541,17 @@ BOOL TMario::fencePunch()
 	setAnimation(ANIM_FENCE_PUNCH, 1.0f);
 	setAttackRadius(mAttackParamsFencePunch.mRadius.get());
 	setAttackHeight(mAttackParamsFencePunch.mHeight.get());
-	offHitFlag(HIT_FLAG_CANNOT_ATTACK);
+	offHitFilter(HIT_FILTER_NO_ATTACK);
 	mModelFaceAngle = mFaceAngle.y;
 
 	if (getMotionFrameCtrl().checkPass(5.0f)) {
 		emitParticle(PARTICLE_MS_M_AMIATTACK, &mRightHandPos);
 		rumbleStart(0x15, mMotorParams.mMotorWall.get());
 		if (unk2C0 != nullptr) {
-			((THitActor*)unk2C0)->receiveMessage(this, 3);
+			((THitActor*)unk2C0)
+			    ->receiveMessage(this, HIT_MESSAGE_SUPER_HIP_DROP);
 			startVoice(MSD_SE_MV15_EXERT_INST_02);
-			if (unk2C0->mActorType == 0x4000006a) {
+			if (unk2C0->mActorType == ACTOR_TYPE_FENCE_REVOLVE_INNER) {
 				f32 x = unk2F4.x;
 				f32 z = unk2F4.y;
 				if (x < -120.0f)

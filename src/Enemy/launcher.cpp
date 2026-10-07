@@ -56,14 +56,14 @@ void TLauncher::init(TLiveManager* param_1)
 		mLaunchCooldown  = launchPeriod * MsRandF();
 	}
 
-	mActorType = 0x10000014;
-	onHitFlag(0x1000000);
+	mActorType = ACTOR_TYPE_LAUNCHER;
+	onHitFilter(HIT_CATEGORY_WATER);
 	mAttackRadius = 0.0f;
 	mAttackHeight = 0.0f;
 	mDamageRadius = 100.0f;
 	mDamageHeight = 100.0f;
 	calcEntryRadius();
-	offHitFlag(0x1);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 BOOL TLauncher::receiveMessage(THitActor* sender, u32 message)
@@ -74,12 +74,13 @@ BOOL TLauncher::receiveMessage(THitActor* sender, u32 message)
 	if (mState == STATE_DIE)
 		return false;
 
-	if (sender->getActorType() == 0x1000001) {
+	if (sender->getActorType() == ACTOR_TYPE_WATER) {
 		if (message == HIT_MESSAGE_SPRAYED_BY_WATER) {
-			gpMarioParticleManager->emit(PARTICLE_MS_ENM_WATHIT, &mPosition, 0,
-			                             nullptr);
-			gpMSound->startSoundSet(MSD_SE_EN_COMMON_W_HIT_OK, &mPosition, 0,
-			                        0.0f, 0, 0, 4);
+			gpMarioParticleManager->emit(PARTICLE_MS_ENM_WATHIT,
+			                             &sender->mPosition, 0, nullptr);
+			MSound* sound = SMSGetMSound();
+			sound->startSoundSet(MSD_SE_EN_COMMON_W_HIT_OK, &sender->mPosition,
+			                     0, 0.0f, 0, 0, 4);
 			if (mState == STATE_HITBYWATER)
 				return true;
 
@@ -223,11 +224,14 @@ void TCommonLauncher::init(TLiveManager* param_1)
 	mMActor       = mMActorKeeper->createMActor("generator_model1.bmd", 0);
 	mSpine->initWith(&TNerveWaitForever<TLiveActor>::theNerve());
 
-	mLaunchCooldown = mLaunchPeriod * MsRandF();
+	s32 launchPeriod = mLaunchPeriod;
+	mLaunchCooldown  = launchPeriod * MsRandF();
 
 	mMActor->setLightType(LIGHT_TYPE_OBJECT);
-	initHitActor(0x10000014, 1, -0x7f000000, 150.0f, 100.0f, 150.0f, 100.0f);
-	offHitFlag(0x1);
+	initHitActor(ACTOR_TYPE_LAUNCHER, 1,
+	             HIT_CATEGORY_PLAYER | HIT_CATEGORY_WATER, 150.0f, 100.0f,
+	             150.0f, 100.0f);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 
 	static_cast<TIdxGroupObj*>(JDrama::TNameRefGen::search("敵グループ"))
 	    ->getChildren()
@@ -273,7 +277,8 @@ void TCommonLauncher::stateHitByWater()
 		decHitPoints();
 	}
 
-	if (mMActor->curAnmEndsNext()) {
+	BOOL anmEndsNext = mMActor->curAnmEndsNext();
+	if (anmEndsNext) {
 		if (mHitPoints == 0)
 			changeState(STATE_DIE);
 		else
@@ -315,15 +320,16 @@ void TCommonLauncher::stateLaunch()
 		TSpineEnemy* enemy = getProperEnemy(unk164);
 		if (enemy) {
 			JGeometry::TVec3<f32> local_14 = mRotation;
+			JGeometry::TVec3<f32> local_2c;
+			Mtx mtx;
 
 			local_14.x = MsWrap(local_14.x - 270.0f, 0.0f, 360.0f);
 
-			Mtx mtx;
 			MsMtxSetRotRPH(mtx, local_14.x, local_14.y, local_14.z);
-			JGeometry::TVec3<f32> local_20(0.0f, 4.0f, 0.0f);
+			local_2c.set(0.0f, 4.0f, 0.0f);
 			local_14.set(0.0f, 0.0f, 0.0f);
-			MTXMultVec(mtx, &local_20, &local_20);
-			enemy->resetSRTV(mPosition, local_14, enemy->mScaling, local_20);
+			MTXMultVec(mtx, &local_2c, &local_2c);
+			enemy->resetSRTV(mPosition, local_14, enemy->mScaling, local_2c);
 		}
 	}
 
@@ -361,7 +367,7 @@ void TCommonLauncher::stateDie()
 		}
 
 		kill();
-		onHitFlag(HIT_FLAG_NO_COLLISION);
+		onHitFilter(HIT_FILTER_NO_COLLISION);
 		resetLaunchTimer();
 		changeState(STATE_NORMAL);
 	}
@@ -396,7 +402,7 @@ void TCommonLauncher::perform(u32 cue, JDrama::TGraphics* graphics)
 
 	if (cue & CUE_MOVE) {
 		for (int i = 0; i < mColCount; ++i)
-			if (mCollisions[i]->isActorType(0x80000001))
+			if (mCollisions[i]->isActorType(ACTOR_TYPE_MARIO))
 				SMS_SendMessageToMario(this, HIT_MESSAGE_ATTACK);
 	}
 }

@@ -77,7 +77,7 @@ DEFINE_NERVE(TNerveNPCGraphWait, TLiveActor)
 	TBaseNPC* self = (TBaseNPC*)spine->getBody();
 
 	if (spine->getTime() == 0)
-		self->unk22C->doThing();
+		self->unk22C->startGraphWait();
 
 	if (self->getMarchSpeed() < 0.001f) {
 		if (self->unk22C->doThing2()) {
@@ -115,13 +115,13 @@ DEFINE_NERVE(TNerveNPCWaitMarioApproach, TLiveActor)
 	}
 
 	u32 actorType = self->getActorType();
-	if (actorType - 0x400001C > 1) {
+	if (actorType - ACTOR_TYPE_NPC_DUMMY > 1) {
 
 		if (!self->isPeachTired()) {
 
 			if (self->isSunflowerReviving()) {
 				self->sunflowerReviving();
-			} else if (actorType == 0x4000006) {
+			} else if (actorType == ACTOR_TYPE_NPC_MONTE_ME) {
 				self->monteMESetAnmWhenFar();
 				self->execTurnToFirstState();
 			} else {
@@ -151,11 +151,11 @@ DEFINE_NERVE(TNerveNPCTurnToMario, TLiveActor)
 	}
 
 	u32 actorType = self->getActorType();
-	if (actorType - 0x400001C > 1) {
+	if (actorType - ACTOR_TYPE_NPC_DUMMY > 1) {
 		if (!self->isPeachTired()) {
 			if (self->isSunflowerReviving()) {
 				self->sunflowerReviving();
-			} else if (actorType == 0x4000006) {
+			} else if (actorType == ACTOR_TYPE_NPC_MONTE_ME) {
 				self->monteMESetAnmWhenNear();
 				self->execTurnToFirstState();
 			} else if (self->isTurnToMarioWhenApproach()) {
@@ -233,7 +233,7 @@ DEFINE_NERVE(TNerveNPCRecoverAfter, TLiveActor)
 	if (spine->getTime() == 0)
 		self->npcRecoverAfterIn();
 
-	if (self->unkD0->getCurrentAnmKind() == NPC_ANM_KIND_UNK3
+	if (self->mLodAnm->getCurrentAnmKind() == NPC_ANM_KIND_UNK3
 	    && self->getMActor()->isCurAnmAlreadyEnd(ANM_TYPE_BCK)) {
 		return true;
 	}
@@ -260,7 +260,7 @@ DEFINE_NERVE(TNerveNPCTalk, TLiveActor)
 		self->npcTalking();
 	} else {
 		u32 actorType = self->getActorType();
-		if (actorType == 0x400001C)
+		if (actorType == ACTOR_TYPE_NPC_DUMMY)
 			return true;
 		self->npcTalkOut();
 	}

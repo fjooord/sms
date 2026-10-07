@@ -11,6 +11,8 @@
 #include "Map/Sky.hpp"
 #include "Map/StickyStainManager.hpp"
 #include <System/MarNameRefGen.hpp>
+
+// rogue includes needed for matching sinit & bss
 #include <M3DUtil/InfectiousStrings.hpp>
 
 JDrama::TNameRef* TMarNameRefGen::getNameRef_Map(const char* name) const
@@ -37,10 +39,10 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Map(const char* name) const
 		return new TSunMgr;
 
 	if (strcmp(name, "SunModel") == 0)
-		return new TSunModel(false, "<TSunModel>");
+		return new TSunModel(false);
 
 	if (strcmp(name, "SunsetModel") == 0)
-		return new TSunModel(true, "<TSunModel>");
+		return new TSunModel(true);
 
 	if (strcmp(name, "MarineSnow") == 0)
 		return new TMarineSnow;

@@ -3,7 +3,7 @@
 
 #include <dolphin/types.h>
 #include <string.h>
-#include <types.h>
+#include <dolphin/types.h>
 
 // Tracing is compiled out of the release build, so the body is empty. The map
 // records the symbol as weak in several translation units, which is why it
@@ -358,7 +358,7 @@ public:
 class TSpcInterp {
 public:
 	/* 0x0 */ TSpcBinary* mBinary;
-	/* 0x4 */ u32 mStepsToDo;
+	/* 0x4 */ s32 mStepsToDo;
 	/* 0x8 */ u32 mProgramCounter;
 	/* 0xC */ s32 mStepsLeft;
 	/* 0x10 */ void* unk10;

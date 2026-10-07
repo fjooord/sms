@@ -41,11 +41,11 @@ void TLightCommon::loadAfter()
 	    JDrama::TNameRefGen::search("Ambient Group"));
 	mLightAry = static_cast<JDrama::TLightAry*>(
 	    JDrama::TNameRefGen::search("Light Group"));
-	mLightPos  = &mLightAry->getLight(0)->mPosition;
+	mLightPos  = &mLightAry->mLights[0].mPosition;
 	mShininess = 50.0f;
 	for (int i = 0; i < 4; ++i) {
-		unk31[i] = mLightAry->getLight(mLightIndex + i)->getColor();
-		unk44[i] = mLightAry->getLight(mLightIndex + i)->mPosition;
+		unk31[i] = mLightAry->getLight(i + mLightIndex)->getColor();
+		unk44[i] = mLightAry->mLights[i + mLightIndex].mPosition;
 	}
 	unk29[0] = mAmbAry->getAmb(mAmbIndex)->getColor();
 	unk29[1] = mAmbAry->getAmb(mAmbIndex + 1)->getColor();
@@ -104,10 +104,9 @@ void TLightCommon::setLight(const JDrama::TGraphics* gfx, int index)
 
 	gpLightManager->setEffectLight(gfx, &light);
 
-	Vec spos;
-	MTXMultVec(gfx->getViewMtx(), getLightPosition(lightIndex), &spos);
-	VECNormalize(&spos, &spos);
-	GXInitSpecularDir(&light, -spos.x, -spos.y, -spos.z);
+	MTXMultVec(gfx->getViewMtx(), getLightPosition(lightIndex), &pos);
+	VECNormalize(&pos, &pos);
+	GXInitSpecularDir(&light, -pos.x, -pos.y, -pos.z);
 	GXInitLightColor(&light, getLightColor(lightIndex));
 	GXInitLightShininess(&light, mShininess);
 	GXLoadLightObjImm(&light, GX_LIGHT2);
@@ -142,7 +141,7 @@ void TLightShadow::perform(u32 cue, JDrama::TGraphics* graphics)
 void TLightMario::perform(u32 cue, JDrama::TGraphics* graphics)
 {
 	if (cue & CUE_LIGHT)
-		setLight(graphics, *gpMarioLightID);
+		setLight(graphics, SMS_GetMarioLightID());
 }
 
 void TLightMario::setLight(const JDrama::TGraphics* gfx, int index)
@@ -161,10 +160,9 @@ void TLightMario::setLight(const JDrama::TGraphics* gfx, int index)
 
 	gpLightManager->setEffectLight(gfx, &light);
 
-	Vec spos;
-	MTXMultVec(gfx->getViewMtx(), getLightPosition(lightIndex), &spos);
-	VECNormalize(&spos, &spos);
-	GXInitSpecularDir(&light, -spos.x, -spos.y, -spos.z);
+	MTXMultVec(gfx->getViewMtx(), getLightPosition(lightIndex), &pos);
+	VECNormalize(&pos, &pos);
+	GXInitSpecularDir(&light, -pos.x, -pos.y, -pos.z);
 	GXInitLightColor(&light, getLightColor(lightIndex));
 	GXInitLightShininess(&light, mShininess);
 	GXLoadLightObjImm(&light, GX_LIGHT2);
@@ -196,10 +194,13 @@ TLightDrawBuffer::TLightDrawBuffer(int param_1, u32 param_2, const char* name)
     , unk80(param_1)
 {
 	snprintf(unk1C, 0x32, "%s%s", name, "opa");
-	mOpaDrawBufferObject = new JDrama::TDrawBufObj(3, param_2, unk1C);
+	JDrama::TDrawBufObj* drawBuffer
+	    = new JDrama::TDrawBufObj(3, param_2, unk1C);
+	mOpaDrawBufferObject = drawBuffer;
 
 	snprintf(unk4E, 0x32, "%s%s", name, "xlu");
-	mXluDrawBufferObject = new JDrama::TDrawBufObj(4, param_2, unk4E);
+	drawBuffer           = new JDrama::TDrawBufObj(4, param_2, unk4E);
+	mXluDrawBufferObject = drawBuffer;
 }
 #pragma dont_inline reset
 
@@ -486,7 +487,7 @@ void TLightWithDBSetManager::setEffectLight(const JDrama::TGraphics* gfx,
 {
 	if (unk54 && unk55) {
 		Vec epos;
-		MTXMultVec(gfx->getViewMtx(), mEffectLightPos, &epos);
+		MTXMultVec(gfx->getViewMtx(), &mEffectLightPos, &epos);
 		GXInitLightPos(light, epos.x, epos.y, epos.z);
 		GXInitLightColor(light, getEffectLightColor());
 		GXInitLightAttnA(light, 1.0f, 0.0f, 0.0f);

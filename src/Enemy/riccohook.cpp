@@ -10,7 +10,7 @@ THookTake::THookTake(TRiccoHook* owner, const char* name)
     : TTakeActor(name)
     , mOwner(owner)
 {
-	initHitActor(0x400000BB, 1, -0x80000000,
+	initHitActor(ACTOR_TYPE_ELASTIC_CODE, 1, HIT_CATEGORY_PLAYER,
 	             mOwner->getSaveLoadParam()->mSLHitRadius.get(),
 	             mOwner->getSaveLoadParam()->mSLHitHeight.get(),
 	             mOwner->getSaveLoadParam()->mSLHitRadius.get(),
@@ -31,13 +31,13 @@ f32 THookTake::getRadiusAtY(f32 y) const
 
 BOOL THookTake::receiveMessage(THitActor* sender, u32 message)
 {
-	if (sender->mActorType == 0x80000001) {
-		if (message == HIT_MESSAGE_UNK5) {
+	if (sender->mActorType == ACTOR_TYPE_MARIO) {
+		if (message == HIT_MESSAGE_ATTACH) {
 			mHeldObject = (TTakeActor*)sender;
 			return TRUE;
 		}
 
-		if (message == HIT_MESSAGE_THROWN || message == HIT_MESSAGE_UNK8) {
+		if (message == HIT_MESSAGE_THROWN || message == HIT_MESSAGE_DETACH) {
 			mHeldObject = nullptr;
 			return TRUE;
 		}
@@ -82,7 +82,7 @@ void TRiccoHook::init(TLiveManager* manager)
 {
 	TSpineEnemy::init(manager);
 	mSpine->initWith(&TNerveRHGraphWander::theNerve());
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	mHookTake = new THookTake(this);
 	unk124->reset();
 	goToShortestNextGraphNode();

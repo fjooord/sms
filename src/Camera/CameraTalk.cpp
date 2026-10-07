@@ -9,19 +9,18 @@ void CPolarSubCamera::makeMtxForTalk(const TBaseNPC* param_1)
 {
 	killHeightPan_();
 	mCurrentTarget.unk2C = mCurrentTarget.mYaw;
-	mCurrentTarget.mYaw  = *gpMarioAngleY - 0x8000;
+	mCurrentTarget.mYaw  = SMS_GetMarioAngleY() - 0x8000;
 	mSavedModeBeforeTalk = mMode;
 
 	int r31 = CAMERA_MODE_TALK_A;
-	int r30 = param_1->getActorType();
-	switch (r30) {
-	case 0x400001B:
+	switch (param_1->getActorType()) {
+	case ACTOR_TYPE_NPC_SUNFLOWER_S:
 		r31 = CAMERA_MODE_TALK_C;
 		break;
-	case 0x400001A:
+	case ACTOR_TYPE_NPC_SUNFLOWER_L:
 		r31 = CAMERA_MODE_TALK_D;
 		break;
-	case 0x4000007:
+	case ACTOR_TYPE_NPC_MONTE_MF:
 		r31 = CAMERA_MODE_TALK_E;
 		break;
 	default:

@@ -26,6 +26,7 @@
 
 // rogue includes needed for matching sinit & rodata
 #include <M3DUtil/InfectiousStrings.hpp>
+#include <macros.h>
 
 // TMonumentShine
 
@@ -48,7 +49,7 @@ void TMonumentShine::initMapObj()
 	unk138.g = 0xFF;
 	unk138.b = 0xFF;
 
-	if (TFlagManager::getInstance()->getFlag(0x10063) != 0) {
+	if (TFlagManager::getInstance()->getFlag(MSF_SHINE_SHINE_GATE) != 0) {
 		unk138.a = 0;
 		unk13C   = 0;
 		unk149   = 1;
@@ -59,7 +60,7 @@ void TMonumentShine::initMapObj()
 	}
 
 	SMS_InitPacket_OneTevKColor(getModel(), 0, GX_KCOLOR0, &unk138);
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TMonumentShine::hitByWater(THitActor* actor)
@@ -94,11 +95,12 @@ void TMonumentShine::hitByWater(THitActor* actor)
 
 BOOL TMonumentShine::receiveMessage(THitActor* sender, u32 message)
 {
-	if (sender->isActorType(0x01000001)) {
+	if (sender->isActorType(ACTOR_TYPE_WATER)) {
 		gpMarioParticleManager->emit(PARTICLE_MS_ENM_WATHIT, &sender->mPosition,
 		                             0, nullptr);
-		SMSGetMSound()->startSoundSet(MSD_SE_EN_COMMON_W_HIT_OK,
-		                              &sender->mPosition, 0, 0.0f, 0, 0, 4);
+		MSound* sound = SMSGetMSound();
+		sound->startSoundSet(MSD_SE_EN_COMMON_W_HIT_OK, &sender->mPosition, 0,
+		                     0.0f, 0, 0, 4);
 
 		if (unk13C == 0)
 			return 1;
@@ -134,7 +136,7 @@ void TMonumentShine::control()
 		return;
 
 	unk140 *= 0.9992f;
-	mAngularVelocity.y += unk140;
+	mRotationDelta.y += unk140;
 
 	if (unk13C > 0) {
 		unk148 = (unk140 > 0.0f) ? 1 : -1;
@@ -150,7 +152,7 @@ void TMonumentShine::control()
 					diff = 0.1f;
 				if (0.0f == diff)
 					unk144++;
-				mAngularVelocity.y += diff;
+				mRotationDelta.y += diff;
 			} else {
 				f32 diff
 				    = MsAngleDiff(mInitialRotation.y - 360.0f, mRotation.y);
@@ -158,20 +160,20 @@ void TMonumentShine::control()
 					diff = -0.1f;
 				if (0.0f == diff)
 					unk144++;
-				mAngularVelocity.y += diff;
+				mRotationDelta.y += diff;
 			}
 		} else {
 			if (unk148 > 0) {
-				mAngularVelocity.y += 0.1f;
-				while (mRotation.y + mAngularVelocity.y > 360.0f) {
+				mRotationDelta.y += 0.1f;
+				while (mRotation.y + mRotationDelta.y > 360.0f) {
 					mRotation.y -= 360.0f;
 					unk144++;
 				}
 			} else {
-				mAngularVelocity.y -= 0.1f;
+				mRotationDelta.y -= 0.1f;
 				f32 step = 360.0f;
 				f32 zero = 0.0f;
-				while (mRotation.y + mAngularVelocity.y < zero) {
+				while (mRotation.y + mRotationDelta.y < zero) {
 					mRotation.y += step;
 					unk144++;
 				}
@@ -212,9 +214,11 @@ void TBellDolpic::initMapObj()
 	unk138.g = 0xFF;
 	unk138.b = 0xFF;
 
-	if ((unk13C == 0 && TFlagManager::getInstance()->getFlag(0x10061) != 0)
+	if ((unk13C == 0
+	     && TFlagManager::getInstance()->getFlag(MSF_SHINE_RIGHT_BELL) != 0)
 	    || (unk13C == 1
-	        && TFlagManager::getInstance()->getFlag(0x10060) != 0)) {
+	        && TFlagManager::getInstance()->getFlag(MSF_SHINE_LEFT_BELL)
+	               != 0)) {
 		unk138.a = 0;
 		unk154   = 0;
 	} else {
@@ -223,7 +227,7 @@ void TBellDolpic::initMapObj()
 	}
 
 	SMS_InitPacket_OneTevKColor(getModel(), 0, GX_KCOLOR0, &unk138);
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TBellDolpic::calcRootMatrix()
@@ -263,11 +267,11 @@ void TBellDolpic::touchPlayer(THitActor* actor) { ring(actor->mPosition); }
 
 BOOL TBellDolpic::receiveMessage(THitActor* sender, u32 message)
 {
-	if (sender->isActorType(0x80000001)) {
+	if (sender->isActorType(ACTOR_TYPE_MARIO)) {
 		ring(sender->mPosition);
 	}
 
-	if (sender->isActorType(0x01000001)) {
+	if (sender->isActorType(ACTOR_TYPE_WATER)) {
 		gpMarioParticleManager->emit(PARTICLE_MS_ENM_WATHIT, &sender->mPosition,
 		                             0, nullptr);
 
@@ -276,7 +280,8 @@ BOOL TBellDolpic::receiveMessage(THitActor* sender, u32 message)
 
 		unk154 = unk154 - 1;
 
-		unk138.a = (u8)(unk154 * 100 / 1000);
+		int alpha = unk154 * 100 / 1000;
+		unk138.a  = (u8)alpha;
 
 		if (unk154 == 0) {
 			if (unk13C == 0) {
@@ -398,7 +403,7 @@ void TMareGate::control()
 void TMareGate::loadAfter()
 {
 	TMapObjBase::loadAfter();
-	if (!TFlagManager::smInstance->getBool(0x50004)) {
+	if (!TFlagManager::smInstance->getBool(MSF_NOKI_AVAILABLE)) {
 		makeObjDead();
 	}
 }
@@ -545,5 +550,5 @@ void TTurboNozzleDoor::touchPlayer(THitActor* player)
 	emitAndScale(57, 0, &unk138, scale);
 
 	removeMapCollision();
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }

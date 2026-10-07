@@ -1,0 +1,42 @@
+#ifndef ENEMY_SLEEPBOSSHANACHAN_HPP
+#define ENEMY_SLEEPBOSSHANACHAN_HPP
+
+#include <Enemy/DemoBossHanachan.hpp>
+
+class TMirrorActor;
+
+class TSleepBossHanachan : public TDemoBossHanachan {
+public:
+	// not in mario.MAP: inlined into TMarNameRefGen::getNameRef_BossEnemy
+	TSleepBossHanachan(const char* name = "?")
+	    : TDemoBossHanachan(name)
+	{
+		mShinePosition.set(0.0f, 0.0f, 0.0f);
+		unk15C = nullptr;
+	}
+
+	virtual void init(TLiveManager*);
+	virtual void calcRootMatrix();
+	virtual const char** getBasNameTable() const;
+
+	void startFall(f32, f32, f32);
+
+public:
+	/* 0x150 */ JGeometry::TVec3<f32> mShinePosition;
+	/* 0x15C */ TMirrorActor* unk15C;
+};
+
+class TSleepBossHanachanManager : public TDemoBossHanachanManager {
+public:
+	// not in mario.MAP: inlined into TMarNameRefGen::getNameRef_BossEnemy
+	TSleepBossHanachanManager(const char* name = "?")
+	    : TDemoBossHanachanManager(name)
+	{
+		mSaveParams
+		    = new TDemoBossHanachanSaveParams("/enemy/sleepBossHanachan.prm");
+	}
+
+	virtual void createModelData();
+};
+
+#endif

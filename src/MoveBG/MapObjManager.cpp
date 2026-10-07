@@ -126,10 +126,11 @@ void TMapObjManager::load(JSUMemoryInputStream& stream)
 		                                              getMActorAnmData(), 3);
 		mGreenGesso  = SMS_MakeMActorFromSDLModelData(mSurfGessoModelData,
 		                                              getMActorAnmData(), 3);
-		TMapObjBase::initPacketMatColor(mRedGesso->mModel, GX_TEVREG1, &unkA8);
-		TMapObjBase::initPacketMatColor(mYellowGesso->mModel, GX_TEVREG1,
+		TMapObjBase::initPacketMatColor(mRedGesso->getModel(), GX_TEVREG1,
+		                                &unkA8);
+		TMapObjBase::initPacketMatColor(mYellowGesso->getModel(), GX_TEVREG1,
 		                                &unkB0);
-		TMapObjBase::initPacketMatColor(mGreenGesso->mModel, GX_TEVREG1,
+		TMapObjBase::initPacketMatColor(mGreenGesso->getModel(), GX_TEVREG1,
 		                                &unkB8);
 	}
 
@@ -203,7 +204,7 @@ bool TMapObjBaseManager::canAppear(const TMapObjBase* param_1,
 	if (param_1->isActorType(param_2)
 	    && !param_1->checkMapObjFlag(TMapObjBase::MAP_OBJ_FLAG_RESPAWNING)
 	    && param_1->checkLiveFlag(LIVE_FLAG_DEAD)
-	    && (!param_1->isActorType(0x2000000E)
+	    && (!param_1->isActorType(ACTOR_TYPE_COIN)
 	        || param_1->getMActor() != nullptr))
 		return true;
 
@@ -217,7 +218,7 @@ TMapObjBase* TMapObjBaseManager::makeObjAppear(f32 x, f32 y, f32 z, u32 param_4,
 	if (param_5) {
 		const TBGCheckData* checkData;
 		y2 = gpMap->checkGround(x, y + 5.0f, z, &checkData);
-		if (checkData->checkFlag(BG_CHECK_FLAG_ILLEGAL))
+		if (checkData->isIllegalData())
 			return nullptr;
 	} else {
 		y2 = y;
@@ -375,7 +376,7 @@ TMapObjBase* TMapObjBaseManager::newAndRegisterObj(
 	if (!ret)
 		ret = newUniqueObjByName(param_1);
 
-	if (ret->isActorType(0x2000000E))
+	if (ret->isActorType(ACTOR_TYPE_COIN))
 		return ret;
 
 	ret->mPosition = param_2;
@@ -395,8 +396,8 @@ TMapObjBase* TMapObjBaseManager::newAndRegisterObjByEventID(u32 event_id,
 
 	switch (event_id) {
 	case 777: {
-		char buffer[64];
-		snprintf(buffer, 64, "シャイン（%s）", name);
+		char buffer[256];
+		snprintf(buffer, sizeof(buffer), "シャイン（%s）", name);
 		return static_cast<TMapObjBase*>(JDrama::TNameRefGen::search(buffer));
 	} break;
 
@@ -433,29 +434,29 @@ TMapObjBase* TMapObjBaseManager::newAndRegisterObjByEventID(u32 event_id,
 u32 TMapObjBaseManager::getActorTypeByEventID(u32 param_1)
 {
 	if (param_1 < 50)
-		return 0x2000000E;
+		return ACTOR_TYPE_COIN;
 
 	switch (param_1) {
 	case 100:
-		return 0x2000000E;
+		return ACTOR_TYPE_COIN;
 	case 200:
-		return 0x2000000F;
+		return ACTOR_TYPE_COIN_RED;
 	case 777:
-		return 0x20000013;
+		return ACTOR_TYPE_SHINE;
 	case 1000:
-		return 0x40000394;
+		return ACTOR_TYPE_FRUIT_BANANA;
 	case 1001:
-		return 0x40000393;
+		return ACTOR_TYPE_FRUIT_DURIAN;
 	case 1002:
-		return 0x40000391;
+		return ACTOR_TYPE_FRUIT_PAPAYA;
 	case 1003:
-		return 0x40000392;
+		return ACTOR_TYPE_FRUIT_PINE;
 	case 1004:
-		return 0x40000390;
+		return ACTOR_TYPE_FRUIT_COCONUT;
 	case 2000:
-		return 0x20000005;
+		return ACTOR_TYPE_MUSHROOM1UP;
 	case 2001:
-		return 0x20000005;
+		return ACTOR_TYPE_MUSHROOM1UP;
 	default:
 		return 0;
 	}

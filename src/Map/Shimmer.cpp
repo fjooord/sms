@@ -45,7 +45,7 @@ void TShimmer::perform(u32 cue, JDrama::TGraphics* graphics)
 			mPosition.set(0.0f, 0.0f, 0.0f);
 		}
 
-		Mtx effectMtx;
+		Mtx44 effectMtx;
 		SMS_GetLightPerspectiveForEffectMtx(effectMtx);
 
 		unk48->getModelData()
@@ -75,13 +75,13 @@ void TShimmer::perform(u32 cue, JDrama::TGraphics* graphics)
 		MTXConcat(afStack_80, afStack_b0, afStack_80);
 		MTXConcat(afStack_80, afStack_e0, afStack_80);
 		unk48->setBaseTRMtx(afStack_80);
-		unk48->entry();
 		unk48->calc();
+		unk48->viewCalc();
 	}
 
 	if (cue & CUE_ENTRY) {
 		if (gpMarDirector->mMap == 2 || !(gpCamera->unk124.y < 0.0f))
-			unk48->update();
+			unk48->entry();
 	}
 }
 

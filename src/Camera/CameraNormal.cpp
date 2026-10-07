@@ -132,22 +132,25 @@ void CPolarSubCamera::ctrlNormalOrTowerCamera_()
                             mSaveEx->mSLAimAngleYChaseMin.get(),
                             mSaveEx->mSLAimAngleYChaseMax.get(), fVar15);
 						CLBChaseAngleDecrease(&mCurrentTarget.mYaw,
-						                      *gpMarioAngleY - 0x8000, uVar9);
+						                      SMS_GetMarioAngleY() - 0x8000,
+						                      uVar9);
 					}
 				} else {
 					f32 f29;
 					f32 f30;
 
-					int sVar9 = *gpMarioAngleY - 0x8000;
+					s16 sVar9 = SMS_GetMarioAngleY() - 0x8000;
 					switch (mMode) {
 					case CAMERA_MODE_DIVING:
 					case CAMERA_MODE_HOVERING:
-						f30 = CLBAbs(sVar9 - unk258) * (2.0f / 65536.0f);
+						f30 = CLBAbs<int>((s16)(sVar9 - unk258))
+						      * (2.0f / 65536.0f);
 						break;
 					default:
 						f30 = (1.0f
-						       - JMASCos((*gpMarioAngleY - 0x8000 - unk258)
-						                 * 2))
+						       - JMASCos(
+						           (SMS_GetMarioAngleY() - 0x8000 - unk258)
+						           * 2))
 						      * 0.5f;
 					} // 0,000030517578
 

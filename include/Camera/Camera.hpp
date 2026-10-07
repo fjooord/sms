@@ -57,6 +57,8 @@ public:
 		NOTICE_MODE_UNK2 = 2,
 	};
 
+	void setGamePad(TMarioGamePad* pad) { unk120 = pad; }
+
 	CPolarSubCamera(const char* = "<CPolarCamera>");
 
 	virtual void loadAfter();
@@ -159,19 +161,6 @@ public:
 	}
 
 private:
-	// fabricated
-	void fabricatedInline2()
-	{
-		CLBCrossToPolar(mTarget, mPosition, &unk256, &unk258);
-
-		unk25C.set(unk148.x - unk124.x, unk148.y - unk124.y,
-		           unk148.z - unk124.z);
-		unk25C.normalize();
-		unk270 = MsClamp(CLBCalcRatio(mCurrentParams->mXAngleMin,
-		                              mCurrentParams->mXAngleMax, unk256),
-		                 0.0f, 1.0f);
-	}
-
 	void calcSecureViewTarget_(s16, f32*, f32*);
 	void execSecureView_(s16, Vec*);
 

@@ -25,7 +25,7 @@
 #include <MSound/MSoundBGM.hpp>
 #include <M3DUtil/InfectiousStrings.hpp>
 
-const char* poihana_bastable[] = {
+static const char* poihana_bastable[] = {
 	"/scene/poihana/bas/poihana_dash.bas",
 	"/scene/poihana/bas/poihana_death.bas",
 	"/scene/poihana/bas/poihana_getup.bas",
@@ -48,8 +48,8 @@ TPoihanaSaveLoadParams::TPoihanaSaveLoadParams(const char* path)
     , PARAM_INIT(mSLBackThrowVal, 0.5f)
     , PARAM_INIT(mSLSleepFrame, 1000)
     , PARAM_INIT(mSLWakeFrame, 2000)
-    , PARAM_INIT(mSLTrapJumpMinSpY, 10.0f)
     , PARAM_INIT(mSLTrapJumpMaxSpY, 10.0f)
+    , PARAM_INIT(mSLTrapJumpMinSpY, 10.0f)
     , PARAM_INIT(mSLTrapJumpMaxSpXZ, 8.0f)
     , PARAM_INIT(mSLTrapJumpMinSpXZ, 8.0f)
     , PARAM_INIT(mSLTrapJumpGravity, 1.0f)
@@ -70,7 +70,7 @@ void TPoiHanaManager::load(JSUMemoryInputStream& stream)
 
 TSmallEnemy* TPoiHanaManager::createEnemyInstance()
 {
-	if (gpApplication.mCurrArea.unk0 == 0x38)
+	if (SMSGetApplication()->mCurrArea.getStage() == 0x38)
 		return new TPoiHana;
 	return nullptr;
 }
@@ -102,14 +102,14 @@ void TPoiHanaCollision::checkHit()
 {
 	for (int i = 0; i < getColNum(); ++i) {
 		THitActor* col = getCollision(i);
-		if (col->isActorType(0x80000001))
+		if (col->isActorType(ACTOR_TYPE_MARIO))
 			unk68->attackToMario();
 		else
 			unk68->behaveToHitOthers(col);
 	}
 }
 
-void TPoiHanaCollision::kill() { onHitFlag(HIT_FLAG_NO_COLLISION); }
+void TPoiHanaCollision::kill() { onHitFilter(HIT_FILTER_NO_COLLISION); }
 
 u8 TPoiHana::mMouthJntIndex = 6;
 u8 TPoiHana::mSleepVersion  = 1;
@@ -138,9 +138,9 @@ void TPoiHana::load(JSUMemoryInputStream& stream)
 void TPoiHana::init(TLiveManager* param_1)
 {
 	TWalkerEnemy::init(param_1);
-	mActorType = 0x10000015;
+	mActorType = ACTOR_TYPE_POI_HANA;
 	unk150     = 17;
-	onHitFlag(HIT_FLAG_UNK40000000);
+	onHitFilter(HIT_CATEGORY_MAP_OBJECT);
 	mGoToSleepTimer = mInstanceIndex * -250;
 	if (mSleepVersion != 0 && !unk1A0)
 		mSpine->initWith(&TNervePoihanaSleep::theNerve());
@@ -154,7 +154,7 @@ void TPoiHana::init(TLiveManager* param_1)
 	    ->getChildren()
 	    .push_back(unk1BC);
 
-	unk1BC->initHitActor(0, 2, 0x80000000,
+	unk1BC->initHitActor(0, 2, HIT_CATEGORY_PLAYER,
 	                     unk19C->mSLAttackRadius.get() * mBodyScale,
 	                     unk19C->mSLAttackHeight.get() * mBodyScale,
 	                     unk19C->mSLDamageRadius.get() * mBodyScale,
@@ -238,7 +238,7 @@ bool TPoiHana::isOnTrap()
 	const TLiveActor* groundActor = mGroundPlane->mActor;
 	if (groundActor == nullptr) {
 		unk198 = mGroundHeight;
-	} else if (groundActor->getActorType() == 0x400000CD) {
+	} else if (groundActor->getActorType() == ACTOR_TYPE_SAND_BOMB_BASE00) {
 		MtxPtr mtx = groundActor->getModel()->getAnmMtx(0);
 		if (mtx[1][1] >= 0.1f) {
 			if (!mIsTrapped) {
@@ -298,7 +298,7 @@ void TPoiHana::setFreezeAnm() { setBckAnm(12); }
 void TPoiHana::setDeadAnm()
 {
 	unk1BC->kill();
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	mHitPoints = 1;
 	if (!unk184)
 		unk18C = 3;
@@ -332,7 +332,7 @@ void TPoiHana::setDeadAnm()
 
 bool TPoiHana::isHitValid(u32 param_1)
 {
-	if (param_1 == 11)
+	if (param_1 == HIT_MESSAGE_UNKB)
 		return true;
 
 	if (mSpine->getCurrentNerve() == &TNervePoihanaFreeze::theNerve()) {
@@ -345,20 +345,21 @@ bool TPoiHana::isHitValid(u32 param_1)
 
 bool TPoiHana::isCollidMove(THitActor* param_1)
 {
-	if ((param_1->getActorType() & ACTOR_TYPE_MASK) == ACTOR_TYPE_UNK40000000) {
+	if ((param_1->getActorType() & HIT_CATEGORY_MASK)
+	    == HIT_CATEGORY_MAP_OBJECT) {
 		if (((TMapObjBase*)param_1)->isHideObj(param_1))
 			return false;
 
-		if (param_1->getActorType() == 0x4000019A
-		    || param_1->getActorType() == 0x400000D0)
+		if (param_1->getActorType() == ACTOR_TYPE_CASINORULET
+		    || param_1->getActorType() == ACTOR_TYPE_WATERMELON)
 			return false;
 
 		if (mSpine->getCurrentNerve() == &TNerveWalkerAttack::theNerve()) {
 			mSpine->pushNerve(&TNervePoihanaFreeze::theNerve());
-			JGeometry::TVec3<f32> vel = mLinearVelocity;
-			mLinearVelocity.x *= -2.0f;
-			mLinearVelocity.y *= 5.0f;
-			mLinearVelocity.z *= -2.0f;
+			JGeometry::TVec3<f32> vel = mPositionDelta;
+			vel.x *= -2.0f;
+			vel.y *= 5.0f;
+			vel.z *= -2.0f;
 			mVelocity = vel;
 
 			mPosition.y += 10.0f;
@@ -380,8 +381,8 @@ void TPoiHana::walkBehavior(int param_1, float param_2)
 	if (mSleepVersion && param_1 == 0) {
 		mGoToSleepTimer += 1;
 		if (checkCurAnmEnd(0)) {
-			if (mGoToSleepTimer
-			    > unk19C->mSLWakeFrame.get() + mInstanceIndex * 100) {
+			int threshold = unk19C->mSLWakeFrame.get() + mInstanceIndex * 100;
+			if (mGoToSleepTimer > threshold) {
 				mGoToSleepTimer = 0;
 
 				mGoToSleepTimer = TMsRange<s32>(-500, 500).rand();
@@ -491,8 +492,8 @@ void TPoiHana::genEventCoin()
 		return;
 
 	TCoin* coin;
-	if (mCoin->isActorType(0x2000000E)) {
-		coin = (TCoin*)gpItemManager->makeObjAppear(0x2000000E);
+	if (mCoin->isActorType(ACTOR_TYPE_COIN)) {
+		coin = (TCoin*)gpItemManager->makeObjAppear(ACTOR_TYPE_COIN);
 	} else {
 		coin = mCoin;
 		coin->appear();
@@ -634,7 +635,7 @@ DEFINE_NERVE(TNervePoihanaFreeze, TLiveActor)
 			else
 				self->setBckAnm(4);
 		} else if (self->isBckAnm(2) || self->isBckAnm(13)) {
-			self->unk1BC->offHitFlag(HIT_FLAG_NO_COLLISION);
+			self->unk1BC->offHitFilter(HIT_FILTER_NO_COLLISION);
 			return true;
 		}
 	}
@@ -661,8 +662,8 @@ DEFINE_NERVE(TNervePoihanaThrow, TLiveActor)
 			SMS_SendMessageToMario(self, HIT_MESSAGE_THROWN);
 			f32 backThrowVal = self->unk19C->mSLBackThrowVal.get();
 			Mtx afStack_4c;
-			MsMtxSetRotRPH(afStack_4c, self->mPosition.x, self->mPosition.y,
-			               self->mPosition.z);
+			MsMtxSetRotRPH(afStack_4c, self->mRotation.x, self->mRotation.y,
+			               self->mRotation.z);
 			JGeometry::TVec3<f32> local_58(0.0f, 1.0f, -backThrowVal);
 			MTXMultVec(afStack_4c, &local_58, &local_58);
 			SMS_ThrowMario(local_58, self->unk19C->mSLThrowSpeed.get());
@@ -698,32 +699,26 @@ DEFINE_NERVE(TNervePoihanaTrapped, TLiveActor)
 			self->mPosition.y += 150.0f;
 			self->onLiveFlag(LIVE_FLAG_AIRBORNE);
 			if (self->unk1A8) {
-				// TODO: rand interval class
-				volatile f32 trapJumpMaxSpY
-				    = self->unk19C->mSLTrapJumpMaxSpY.get();
-				volatile f32 trapJumpMaxSpXZ
-				    = self->unk19C->mSLTrapJumpMaxSpXZ.get();
-				volatile f32 trapJumpMinSpY
-				    = self->unk19C->mSLTrapJumpMinSpY.get();
-				volatile f32 trapJumpMinSpXZ
-				    = self->unk19C->mSLTrapJumpMinSpXZ.get();
+				f32 trapJumpMinSpY  = self->unk19C->mSLTrapJumpMinSpY.get();
+				f32 trapJumpMaxSpY  = self->unk19C->mSLTrapJumpMaxSpY.get();
+				f32 trapJumpMaxSpXZ = self->unk19C->mSLTrapJumpMaxSpXZ.get();
+				f32 trapJumpMinSpXZ = self->unk19C->mSLTrapJumpMinSpXZ.get();
+				TMsRange<f32> trapJumpSpXZ(trapJumpMinSpXZ, trapJumpMaxSpXZ);
+				TMsRange<f32> trapJumpSpY(trapJumpMinSpY, trapJumpMaxSpY);
 
 				JGeometry::TVec3<f32> local_48;
-				const TLiveActor* groundActor
-				    = self->getGroundPlane()->getActor();
-				if (groundActor)
-					local_48 = self->mPosition - groundActor->mPosition;
+				if (self->getGroundPlane()->getActor())
+					local_48 = self->mPosition
+					           - self->getGroundPlane()->getActor()->mPosition;
 				else
 					local_48 = self->mPosition - SMS_GetMarioPos();
-				if (local_48.x == 0.0f && local_48.y == 0.0f
-				    && local_48.z == 0.0f)
+				if (local_48.x == local_48.y == local_48.z)
 					local_48.x = 1.0f;
 
 				VECNormalize(&local_48, &local_48);
-				// TODO: rand interval class
-				local_48.x *= MsRandF(trapJumpMinSpXZ, trapJumpMaxSpXZ);
-				local_48.y = MsRandF(trapJumpMinSpY, trapJumpMaxSpY);
-				local_48.z *= MsRandF(trapJumpMinSpXZ, trapJumpMaxSpXZ);
+				local_48.x *= trapJumpSpXZ.rand();
+				local_48.y = trapJumpSpY.rand();
+				local_48.z *= trapJumpSpXZ.rand();
 
 				self->mVelocity             = local_48;
 				self->mCurrentFlungVelocity = local_48;

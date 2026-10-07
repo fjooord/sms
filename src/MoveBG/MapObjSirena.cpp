@@ -35,7 +35,7 @@ static TSirenaRollMapObj* gpCurObject;
 
 BOOL TRouletteSw::receiveMessage(THitActor* sender, u32 message)
 {
-	if (message == 1) {
+	if (message == HIT_MESSAGE_HIP_DROP) {
 		unk6C = 1;
 		return 1;
 	}
@@ -58,18 +58,18 @@ TRoulette::TRoulette(const char* name)
     , unk144(0.2f)
     , unk150(nullptr)
 {
-	unk148 = 0;
-	unk14A = 0;
-	unk14C = 0;
-	unk14E = 255;
-	if (gpApplication.mCurrArea.getStage() == 14
+	unk148.r = 0;
+	unk148.g = 0;
+	unk148.b = 0;
+	unk148.a = 255;
+	if (SMSGetApplication()->mCurrArea.getStage() == 14
 	    && gpMarDirector->getCurrentStage() == 1) {
-		unk141 = 1;
-		unk14C = 255;
+		unk141   = 1;
+		unk148.b = 255;
 	}
-	if (gpApplication.mCurrArea.getStage() == 56) {
-		unk14C = 255;
-		unk142 = 1;
+	if (SMSGetApplication()->mCurrArea.getStage() == 56) {
+		unk148.b = 255;
+		unk142   = 1;
 	}
 }
 
@@ -81,26 +81,25 @@ void TRoulette::initMapObj()
 		if (strstr(getModel()->getModelData()->getMaterialName()->getName(i),
 		           "_switch")
 		    != nullptr) {
-			SMS_InitPacket_OneTevColor(mMActor->getModel(), i, GX_TEVREG0,
-			                           (GXColorS10*)&unk148);
+			SMS_InitPacket_OneTevColor(getMActor()->getModel(), i, GX_TEVREG0,
+			                           &unk148);
 		}
 	}
 
 	unk150 = new TRouletteSw(this, "ルーレットスイッチ");
 
-	static_cast<TIdxGroupObj*>(
-	    JDrama::TNameRefGen::search("オブジェクトグループ"))
-	    ->getChildren()
-	    .push_back(unk150);
+	TIdxGroupObj* objGroup = static_cast<TIdxGroupObj*>(
+	    JDrama::TNameRefGen::search("オブジェクトグループ"));
+	objGroup->getChildren().push_back(unk150);
 	f32 attackR = 500.0f;
 	f32 attackH = 100.0f;
-	if (gpApplication.mCurrArea.unk0 == 14) {
+	if (SMSGetApplication()->mCurrArea.getStage() == 14) {
 		attackR = 40.0f;
 		attackH = 80.0f;
 	}
-	unk150->initHitActor(0x4000019A, 2, 0x80000000, attackR, attackH, attackR,
-	                     attackH);
-	unk150->offHitFlag(HIT_FLAG_NO_COLLISION);
+	unk150->initHitActor(ACTOR_TYPE_CASINORULET, 2, HIT_CATEGORY_PLAYER,
+	                     attackR, attackH, attackR, attackH);
+	unk150->offHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TRoulette::perform(u32 cue, JDrama::TGraphics* graphics)
@@ -113,7 +112,7 @@ void TRoulette::moveObject()
 {
 	TLiveActor::moveObject();
 	if (unk142 != 0)
-		mRotation.x += unk13C;
+		mRotation.y += unk13C;
 
 	if (unk141 != 0 && unk140 != 0) {
 		gpMarioOriginal->mGamePad->onNeutralMarioKey();
@@ -138,9 +137,9 @@ void TRoulette::calcRootMatrix()
 void TRoulette::setRollSp(f32 sp)
 {
 	unk13C        = sp;
-	unk148        = 0;
-	unk14A        = 0;
-	unk14C        = 255;
+	unk148.r      = 0;
+	unk148.g      = 0;
+	unk148.b      = 255;
 	unk150->unk6C = 0;
 }
 
@@ -151,17 +150,17 @@ void TRoulette::switchStop()
 		    && unk13C != 0.0f) {
 			unk150->unk6C = 0;
 			unk13C        = 0.0f;
-			unk148        = 0;
-			unk14A        = 0;
-			unk14C        = 0;
+			unk148.r      = 0;
+			unk148.g      = 0;
+			unk148.b      = 0;
 			SMSGetMSound()->startSoundActor(MSD_SE_BS_TELESA_RLT_STOP,
 			                                &mPosition, 0, nullptr, 0, 4);
 		}
 		if (unk150->unk6C != 0 && unk141 != 0) {
 			unk150->unk6C = 0;
-			unk148        = 0;
-			unk14A        = 0;
-			unk14C        = 0;
+			unk148.r      = 0;
+			unk148.g      = 0;
+			unk148.b      = 0;
 			SMSGetMSound()->startSoundActor(MSD_SE_BS_TELESA_RLT_STOP,
 			                                &mPosition, 0, nullptr, 0, 4);
 			unk140 = 1;
@@ -174,10 +173,8 @@ static int partsRollCallback(J3DNode* node, int flag)
 	if (flag == 0) {
 		if (gpCurObject == nullptr)
 			return 1;
-		int jntNo     = ((J3DJoint*)node)->getJntNo();
+		u16 jntNo     = ((J3DJoint*)node)->getJntNo();
 		MtxPtr jntMtx = gpCurObject->getModel()->getAnmMtx(jntNo);
-
-		--jntNo;
 
 		TPosition3f local_4C;
 		local_4C.setTrans(0.0f, 0.0f, 0.0f);
@@ -185,9 +182,9 @@ static int partsRollCallback(J3DNode* node, int flag)
 		                  gpCurObject->mScaling.z);
 
 		Mtx local_1C;
-		MsMtxSetRotRPH(local_1C, gpCurObject->getRollAngX(jntNo),
-		               gpCurObject->getRollAngY(jntNo),
-		               gpCurObject->getRollAngZ(jntNo));
+		MsMtxSetRotRPH(local_1C, gpCurObject->getRollAngX(jntNo - 1),
+		               gpCurObject->getRollAngY(jntNo - 1),
+		               gpCurObject->getRollAngZ(jntNo - 1));
 		MTXConcat(jntMtx, local_1C, jntMtx);
 		MTXConcat(jntMtx, local_4C, jntMtx);
 		MTXConcat(J3DSys::mCurrentMtx, local_1C, J3DSys::mCurrentMtx);
@@ -253,7 +250,7 @@ void TSlotDrum::initMapObj()
 
 void TSlotDrum::initNeonMatColor()
 {
-	const char* matNames[3] = { "_NEON_A", "_NEON_B", "_NEON_C" };
+	const char* matNames[3] = { "_NEON_C", "_NEON_B", "_NEON_A" };
 	for (int i = 0; i < 3; i++) {
 		unk170[i].r = 120;
 		unk170[i].g = 230;
@@ -325,10 +322,9 @@ void TSlotDrum::moveObject()
 						for (int j = 0; j < unk148; ++j) {
 							if (i == j)
 								continue;
-							if (unk138[j] != 0.0f)
-								return;
-							if ((unk13C[j] >= (f32)unk168
-							     && unk13C[j] > 360.0f))
+							if (unk138[j] != 0.0f
+							    || (unk13C[j] >= (f32)unk168
+							        && unk13C[j] < 360.0f))
 								return;
 						}
 						MSBgm::startBGM(MSD_BGM_FANFARE_RACE);
@@ -449,15 +445,17 @@ void TItemSlotDrum::moveObject()
 					SMSGetMSound()->startSoundActor(MSD_SE_BS_TELESA_SLT_STOP,
 					                                &mPosition, 0, nullptr, 0,
 					                                4);
-					bool allStopped = 0.0f == unk138[0] && 0.0f == unk138[1]
-					                  && 0.0f == unk138[2];
+					bool allStopped = true;
+					for (int k = 0; k < 3; ++k)
+						if (unk138[k] != 0.0f)
+							allStopped = false;
 					if (allStopped) {
 						unk1A2 = true;
 						generateItem();
 					}
 					for (int j = 0; j < unk148; ++j) {
 						if (unk19F[j]) {
-							if (TMsRange<f32>(0.0f, 1.0f).rand() < 0.9f)
+							if (TMsRange<f32>(0.0f, 1.0f).rand() <= 0.9f)
 								unk19C[j] = true;
 							else
 								unk19F[j] = false;
@@ -503,11 +501,13 @@ u32 TItemSlotDrum::touchWater(THitActor* water)
 	if (unk194 || !unk1A2)
 		return 1;
 
-	unk1A4 = TMsRange<s32>(100, 150).rand();
+	TMsRange<s32> range(100, 150);
+	unk1A4 = range.rand();
 	for (int i = 0; i < unk148; ++i) {
 		unk19F[i] = true;
 		unk19C[i] = false;
-		unk138[i] = unk158 * TMsRange<f32>(0.5f, 0.8f).rand();
+		TMsRange<f32> range2(0.5f, 0.8f);
+		unk138[i] = unk158 * range2.rand();
 	}
 	unk1A2 = false;
 
@@ -526,7 +526,7 @@ void TItemSlotDrum::generateItem()
 		    mPosition, "テレサマネージャー", 1);
 		if (item != nullptr) {
 			Mtx m;
-			MsMtxSetRotY(m, mRotation.x);
+			MsMtxSetRotY(m, mRotation.y);
 			JGeometry::TVec3<f32> off(0.0f, -350.0f, 300.0f);
 			MTXMultVec(m, &off, &off);
 			item->mPosition += off;
@@ -543,19 +543,18 @@ void TItemSlotDrum::generateItem()
 		}
 		for (int i = 0; i < count; ++i) {
 			Mtx m;
-			MsMtxSetRotY(m, spread * ((f32)i - 1.0f) + (mRotation.x - spread));
+			MsMtxSetRotY(m, spread * (f32)i + (mRotation.y - spread));
 			JGeometry::TVec3<f32> off(0.0f, -350.0f, 200.0f);
 			MTXMultVec(m, &off, &off);
 			TMapObjBase* item = gpItemManager->makeObjAppear(
 			    mPosition.x + off.x, mPosition.y, mPosition.z + off.z,
-			    0x2000000E, false);
+			    ACTOR_TYPE_COIN, false);
 			if (item != nullptr) {
 				item->mPosition += off;
 				MsVECNormalize(&off, &off);
-				item->mVelocity.x = 12.0f * off.x;
-				item->mVelocity.y = TMsRange<f32>(5.0f, 10.0f).rand();
-				item->mVelocity.z = 12.0f * off.z;
-				item->offLiveFlag(LIVE_FLAG_UNK10);
+				item->setVelocityAndFlag10(12.0f * off.x,
+				                           TMsRange<f32>(5.0f, 10.0f).rand(),
+				                           12.0f * off.z);
 			}
 		}
 	} else {
@@ -601,7 +600,8 @@ int TItemSlotDrum::getForcastResult(int idx)
 				break;
 		}
 	}
-	return getResultFromAng((int)(angle / unk168) * unk168);
+	angle = (int)(angle / unk168) * unk168;
+	return getResultFromAng(angle);
 }
 
 int TItemSlotDrum::getResultFromAng(f32 ang)
@@ -742,7 +742,7 @@ u32 TCasinoPanelGate::touchWater(THitActor* water)
 	if (fabsf(mPosition.z - water->mPosition.z) < 50.0f) {
 		unk164 = 1;
 		int idx;
-		if (water->mPosition.y > 3.0f * unk144 + mPosition.y) {
+		if (water->mPosition.y > mPosition.y + unk144 * 3.0f) {
 			if (water->mPosition.x < mPosition.x - unk140)
 				idx = 12;
 			else if (water->mPosition.x < mPosition.x)
@@ -751,9 +751,9 @@ u32 TCasinoPanelGate::touchWater(THitActor* water)
 				idx = 15;
 			else
 				idx = 14;
-			if (water->mPosition.y < 3.5f * unk144 + mPosition.y)
+			if (water->mPosition.y < mPosition.y + unk144 * 3.5f)
 				unk164 = -1;
-		} else if (water->mPosition.y > 2.0f * unk144 + mPosition.y) {
+		} else if (water->mPosition.y > mPosition.y + unk144 * 2.0f) {
 			if (water->mPosition.x < mPosition.x - unk140)
 				idx = 8;
 			else if (water->mPosition.x < mPosition.x)
@@ -762,7 +762,7 @@ u32 TCasinoPanelGate::touchWater(THitActor* water)
 				idx = 11;
 			else
 				idx = 10;
-			if (water->mPosition.y < 2.5f * unk144 + mPosition.y)
+			if (water->mPosition.y < mPosition.y + unk144 * 2.5f)
 				unk164 = -1;
 		} else if (water->mPosition.y > mPosition.y + unk144) {
 			if (water->mPosition.x < mPosition.x - unk140)
@@ -773,7 +773,7 @@ u32 TCasinoPanelGate::touchWater(THitActor* water)
 				idx = 7;
 			else
 				idx = 6;
-			if (water->mPosition.y < 1.5f * unk144 + mPosition.y)
+			if (water->mPosition.y < mPosition.y + unk144 * 1.5f)
 				unk164 = -1;
 		} else {
 			if (water->mPosition.x < mPosition.x - unk140)
@@ -784,7 +784,7 @@ u32 TCasinoPanelGate::touchWater(THitActor* water)
 				idx = 3;
 			else
 				idx = 2;
-			if (water->mPosition.y < 0.5f * unk144 + mPosition.y)
+			if (water->mPosition.y < mPosition.y + unk144 * 0.5f)
 				unk164 = -1;
 		}
 		unk138[idx] += unk154 * unk164;
@@ -823,7 +823,7 @@ void TDonchou::initMapObj()
 void TDonchou::loadAfter()
 {
 	TMapObjBase::loadAfter();
-	if (gpApplication.mCurrArea.getStage() == 14
+	if (SMSGetApplication()->mCurrArea.getStage() == 14
 	    && gpMarDirector->getCurrentStage() == 0) {
 		unk144
 		    = static_cast<TSlotDrum*>(JDrama::TNameRefGen::search("srotdram"));
@@ -959,14 +959,13 @@ void TCloset::moveObject()
 						    fabsf(unk138[i]), 0, 0, nullptr, 0, 4);
 					if ((int)fabsf(unk13C[i]) % 180 == 0) {
 						unk138[i] = 0.0f;
-						if (unk13C[i] < 180.0f || unk13C[i] == 360.0f) {
+						if (unk13C[i] <= 180.0f || unk13C[i] >= 360.0f) {
 							for (int j = 0; j < unk148; ++j) {
 								if (i == j)
 									continue;
-								if (unk138[j] != 0.0f)
-									return;
-								if (!(unk13C[j] < 180.0f
-								      || unk13C[j] >= 360.0f))
+								if (unk138[j] != 0.0f
+								    || (unk13C[j] >= 180.0f
+								        && unk13C[j] < 360.0f))
 									return;
 							}
 							unk16C = 1;
@@ -1000,9 +999,8 @@ u32 TCloset::touchWater(THitActor* water)
 	if (unk16C != 0)
 		return 0;
 	if (fabsf(mPosition.x - water->mPosition.x) < 50.0f) {
-		f32 halfDepth = 1.1f * unk140;
 		int idx;
-		if (water->mPosition.z < mPosition.z - halfDepth) {
+		if (water->mPosition.z < mPosition.z - 1.1f * unk140) {
 			idx = 0;
 			if (mRotation.y < 0.0f)
 				idx = 3;
@@ -1010,7 +1008,7 @@ u32 TCloset::touchWater(THitActor* water)
 			idx = 1;
 			if (mRotation.y < 0.0f)
 				idx = 2;
-		} else if (water->mPosition.z < mPosition.z + halfDepth) {
+		} else if (water->mPosition.z < mPosition.z + 1.1f * unk140) {
 			idx = 2;
 			if (mRotation.y < 0.0f)
 				idx = 1;
@@ -1144,9 +1142,9 @@ void TWarpAreaActor::load(JSUMemoryInputStream& stream)
 	unk68 = v;
 	stream >> v;
 	unk6A = v;
-	initHitActor(0x4000019D, 1, -0x80000000, 100.0f * mScaling.x,
-	             100.0f * mScaling.y, 0.0f, 0.0f);
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	initHitActor(ACTOR_TYPE_WARP_AREA_ACTOR, 1, HIT_CATEGORY_PLAYER,
+	             100.0f * mScaling.x, 100.0f * mScaling.y, 0.0f, 0.0f);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	gpConductor->registerOtherObj(this);
 }
 
@@ -1159,7 +1157,8 @@ TWarpAreaActor::TWarpAreaActor(const char* name)
 
 u32 TChestRevolve::touchWater(THitActor* actor)
 {
-	if (isState(STATE_NORMAL)) {
+	bool state = isState(STATE_NORMAL);
+	if (state) {
 		mState = STATE_REVOLVING;
 		startAnim(1);
 		setUpMapCollision(1);
@@ -1184,7 +1183,8 @@ void TChestRevolve::control()
 
 BOOL TPanelRevolve::receiveMessage(THitActor* actor, u32 message)
 {
-	if (isState(STATE_NORMAL)) {
+	bool state = isState(STATE_NORMAL);
+	if (state) {
 		SMSGetMSound()->startSoundActor(MSD_SE_OBJ_PANEL_ROLL, &mPosition, 0,
 		                                nullptr, 0, 4);
 		mState = STATE_REVOLVING;
@@ -1223,7 +1223,7 @@ void TPanelRevolve::control()
 void TPictureTelesa::afterFinishedAnim()
 {
 	TWaterHitPictureHideObj::afterFinishedAnim();
-	if (isActorType(0x400001A2)) {
+	if (isActorType(ACTOR_TYPE_PICTURE_TERESA)) {
 		SMSGetMSound()->startSoundSystemSE(MSD_SE_SY_CLEAR_SIGN_BIG, 0, nullptr,
 		                                   0);
 		SMSGetMSound()->startSoundActor(MSD_SE_BS_TELESA_V_LAUGH2, &mPosition,
@@ -1234,8 +1234,8 @@ void TPictureTelesa::afterFinishedAnim()
 void TPictureTelesa::touchActor(THitActor* actor)
 {
 	TWaterHitPictureHideObj::touchActor(actor);
-	if (isActorType(0x400001A2) && !unk174 && isState(STATE_FINISHED)
-	    && !isStateTimerEngaged()) {
+	if (isActorType(ACTOR_TYPE_PICTURE_TERESA) && !unk174
+	    && isState(STATE_FINISHED) && !isStateTimerEngaged()) {
 		if (actor->mPosition.distance(mPosition) < 200.0f) {
 			startStateTimer(60);
 			SMSGetMSound()->startSoundActor(MSD_SE_BS_TELESA_DISAPPEAR,

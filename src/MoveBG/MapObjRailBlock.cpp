@@ -65,12 +65,12 @@ BOOL TRailMapObj::moveToNextNode(float param_1)
 
 	if (unk138->unk0->unk14 ? TRUE : FALSE) {
 
-		bool result = unk138->traceSpline(unk138->calcSplineSpeed(param_1));
+		BOOL result = unk138->traceSpline(unk138->calcSplineSpeed(param_1));
 		JGeometry::TVec3<f32> local_1C;
 		JGeometry::TVec3<f32> local_28;
 		unk138->unk0->unk14->getPosAndRot(unk138->unk14, &local_1C, &local_28);
 		local_1C.sub(mPosition);
-		mLinearVelocity.add(local_1C);
+		mPositionDelta.add(local_1C);
 
 		mRotation = local_28;
 		if (result)
@@ -91,7 +91,7 @@ BOOL TRailMapObj::moveToNextNode(float param_1)
 	} else {
 		VECNormalize(&local_34, &local_34);
 		local_34.scale(param_1);
-		mLinearVelocity.add(local_34);
+		mPositionDelta.add(local_34);
 		if (unk13C > 0)
 			--unk13C;
 		return false;
@@ -176,7 +176,7 @@ void TRailMapObj::resetPosition()
 void TRailMapObj::initMapObj()
 {
 	TMapObjBase::initMapObj();
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	mMActor->setLightType(LIGHT_TYPE_MAPOBJECT);
 }
 
@@ -203,8 +203,7 @@ void TRailMapObj::setGroundCollision()
 	    && (!checkMapObjFlag(MAP_OBJ_FLAG_UNK2) || getColNum() != 0)) {
 		TMtx34f mtx;
 		mtx.set(getModel()->getAnmMtx(0));
-		if (TMapCollisionBase* col = mMapCollisionManager->unk8)
-			col->moveMtx(mtx);
+		mMapCollisionManager->moveActiveCollisionMtx(mtx);
 	}
 }
 
@@ -265,7 +264,7 @@ void TNormalLift::load(JSUMemoryInputStream& stream)
 
 	stream >> unk154;
 	if (unk154 > 0.0f && mMapCollisionManager) {
-		TMapCollisionBase* col = mMapCollisionManager->getUnk8();
+		TMapCollisionBase* col = mMapCollisionManager->getActiveCollision();
 		col->setAllBGType(7);
 		col->setAllActor(this);
 		col->setAllData(unk154);
@@ -276,20 +275,20 @@ void TNormalLift::readRailFlag()
 {
 	TRailMapObj::readRailFlag();
 
-	TGraphWeb* graph = unk138->unk0;
+	TGraphWeb* graph = unk138->getGraph();
 
-	if (!unk138->unk0)
+	if (!graph)
 		return;
 
-	if (!graph->isDummy())
+	if (graph->isDummy())
 		return;
 
-	TRailNode* railNode = graph->getCurrentNode().getRailNode();
-	if (railNode->mFlags & 0x800) {
-		unk150 = railNode->mPitch;
+	TGraphNode& node = graph->getGraphNode(unk138->getCurGraphIndex());
+	if (node.getRailNode()->mFlags & 0x800) {
+		unk150 = node.getRailNode()->mPitch;
 	}
-	if (railNode->mFlags & 0x1000) {
-		u16 roll = railNode->mRoll;
+	if (node.getRailNode()->mFlags & 0x1000) {
+		u16 roll = node.getRailNode()->mRoll;
 		if (roll == 0xffff)
 			roll = 0;
 		unk152 = roll;
@@ -354,7 +353,7 @@ TRailBlock::TRailBlock(const char* name)
 void TRailBlock::initMapObj()
 {
 	TRailMapObj::initMapObj();
-	onLiveFlag(LIVE_FLAG_UNK400);
+	onLiveFlag(LIVE_FLAG_FORCE_SHADOW);
 	unk15C = mRotation;
 	unk168 = mRotation;
 }
@@ -376,7 +375,95 @@ void TRailBlock::calcRootMatrix()
 	model->setBaseScale(mScaling);
 }
 
-void TRailBlock::control() { }
+void TRailBlock::control()
+{
+	TMapObjBase::control();
+	mDamageRadius = 300.0f;
+	mDamageHeight = 50.0f;
+	calcEntryRadius();
+
+	checkMarioRiding();
+	if (calcRecycle() || checkRailFlag(2))
+		return;
+
+	if (moveToNextNode(unk144)) {
+		TGraphNode& node = unk138->getCurrent();
+		if (node.getRailNode()->mFlags & 0x1000) {
+			unk14A = 180;
+			unk148 = 2;
+		}
+
+		unk138->moveToShortestNext();
+
+		TRailNode* nextNode = unk138->getCurrent().getRailNode();
+		u16 speed           = nextNode->mSpeed;
+		if (speed != 0xffff)
+			unk144 = speed * 0.01f;
+
+		JGeometry::TVec3<f32> nextPoint
+		    = unk138->unk0->indexToPoint(unk138->mCurrIdx);
+		f32 step = VECDistance(&nextPoint, &mPosition) / unk144;
+		unk13C   = step;
+
+		if (checkRailFlag(2)) {
+			MTXIdentity(unk174);
+			unk168.x = 0.0f;
+			unk168.y = 0.0f;
+			unk168.z = 0.0f;
+			return;
+		}
+
+		unk168 = unk15C;
+
+		Mtx rotMtx;
+		MsMtxSetRotRPH(rotMtx, unk168.x, unk168.y, unk168.z);
+		MTXConcat(rotMtx, unk174, unk174);
+
+		unk168.x = 0.0f;
+		unk168.y = 0.0f;
+		unk168.z = 0.0f;
+
+		JGeometry::TVec3<f32> xAxis(unk174[0][0], unk174[1][0], unk174[2][0]);
+		JGeometry::TVec3<f32> yAxis(unk174[0][1], unk174[1][1], unk174[2][1]);
+		JGeometry::TVec3<f32> zAxis(unk174[0][2], unk174[1][2], unk174[2][2]);
+		PSVECNormalize(&xAxis, &xAxis);
+		PSVECNormalize(&yAxis, &yAxis);
+		PSVECNormalize(&zAxis, &zAxis);
+
+		xAxis.x -= 1.0f;
+		yAxis.y -= 1.0f;
+		zAxis.z -= 1.0f;
+		if (fabsf(xAxis.x) < 0.02f && fabsf(xAxis.y) < 0.02f
+		    && fabsf(xAxis.z) < 0.02f && fabsf(yAxis.x) < 0.02f
+		    && fabsf(yAxis.y) < 0.02f && fabsf(yAxis.z) < 0.02f
+		    && fabsf(zAxis.x) < 0.02f && fabsf(zAxis.y) < 0.02f
+		    && fabsf(zAxis.z) < 0.02f)
+			MTXIdentity(unk174);
+
+		JGeometry::TVec3<f32> point;
+		TGraphNode& rotateNode = unk138->getCurrent();
+		rotateNode.getPoint(&point);
+		f32 rotateStep      = VECDistance(&mPosition, &point) / unk144;
+		TRailNode* railNode = rotateNode.getRailNode();
+		unk15C.x            = railNode->mPitch;
+		unk15C.y            = railNode->mYaw;
+		unk15C.z            = railNode->mRoll;
+		unk150              = MsAngleDiff(unk15C.x, unk168.x) / rotateStep;
+		unk154              = MsAngleDiff(unk15C.y, unk168.y) / rotateStep;
+		unk158              = MsAngleDiff(unk15C.z, unk168.z) / rotateStep;
+	} else {
+		mRotation.x += unk150;
+		mRotation.y += unk154;
+		mRotation.z += unk158;
+		unk168.x += unk150;
+		unk168.y += unk154;
+		unk168.z += unk158;
+
+		mRotation.x = MsWrap<f32>(mRotation.x, 0.0f, 360.0f);
+		mRotation.y = MsWrap<f32>(mRotation.y, 0.0f, 360.0f);
+		mRotation.z = MsWrap<f32>(mRotation.z, 0.0f, 360.0f);
+	}
+}
 
 TRollBlock::TRollBlock(const char* name)
     : TMapObjBase(name)
@@ -402,8 +489,7 @@ void TRollBlock::setGroundCollision()
 		return;
 
 	MtxPtr mtx = getModel()->getAnmMtx(0);
-	if (TMapCollisionBase* col = mMapCollisionManager->getUnk8())
-		col->moveMtx(mtx);
+	mMapCollisionManager->moveActiveCollisionMtx(mtx);
 }
 
 Mtx* TRollBlock::getRootJointMtx() const
@@ -411,7 +497,18 @@ Mtx* TRollBlock::getRootJointMtx() const
 	return (Mtx*)getModel()->getAnmMtx(0);
 }
 
-void TRollBlock::calcRootMatrix() { }
+void TRollBlock::calcRootMatrix()
+{
+	J3DModel* model = getModel();
+	MtxPtr mtx      = model->getBaseTRMtx();
+	MsMtxSetXYZRPH(mtx, mPosition.x, mPosition.y - mYOffset, mPosition.z,
+	               mRotation.x, mRotation.y, mRotation.z);
+	model->setBaseScale(mScaling);
+
+	Mtx rot;
+	MsMtxSetRotZ(rot, unk138);
+	MTXConcat(mtx, rot, mtx);
+}
 
 void TRollBlock::control()
 {

@@ -55,6 +55,7 @@ class TMapObjBillboard : public THideObjBase {
 public:
 	TMapObjBillboard(const char* name = "看板")
 	    : THideObjBase(name)
+	    , unk150(nullptr)
 	{
 	}
 
@@ -145,7 +146,7 @@ public:
 	THideObjInfo(const char* name = "オブジェ出現情報");
 
 	virtual void load(JSUMemoryInputStream&);
-	virtual void action(long);
+	virtual void action(s32);
 
 public:
 	/* 0x44 */ u32 unk44;

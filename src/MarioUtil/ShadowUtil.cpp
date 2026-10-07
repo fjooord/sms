@@ -23,6 +23,8 @@
 #include <dolphin/gx.h>
 #include <math.h>
 
+#include <System/DummyStrings.hpp>
+
 TMBindShadowParts::TMBindShadowParts(J3DModel* param_1, u8 param_2,
                                      TMBindShadowBody* param_3, f32 param_4)
     : mMinRadius(0.01f)
@@ -112,8 +114,8 @@ void TMBindShadowParts::calc(f32 param_1)
 	request.mRadiusX = radiusX;
 	request.mRadiusZ = radiusZ;
 
-	if (!mIsCircle && mBody->mActor->getActorType() != 0x80000001
-	    && mBody->mActor->getActorType() != 0x8000002) {
+	if (!mIsCircle && mBody->mActor->getActorType() != ACTOR_TYPE_MARIO
+	    && mBody->mActor->getActorType() != ACTOR_TYPE_E_MARIO) {
 		f32 rotY = matan(z2 - z1, x2 - x1) * (360.0f / 65536.0f);
 		if (radiusX > radiusZ)
 			rotY -= 90.0f;
@@ -136,13 +138,13 @@ TMBindShadowBody::TMBindShadowBody(THitActor* param_1, J3DModel* param_2,
     , mBodyRadius(50.0f)
 {
 	switch (param_1->getActorType()) {
-	case 0x80000001:
-	case 0x8000002:
+	case ACTOR_TYPE_MARIO:
+	case ACTOR_TYPE_E_MARIO:
 		mCircleRadius = 38.0f;
 		mPartsRadius  = 18.0f;
 		mBodyRadius   = 25.0f;
 		break;
-	case 0x8000001:
+	case ACTOR_TYPE_HINOKURI2:
 		mCircleRadius = 280.0f;
 		mPartsRadius  = 50.0f;
 		break;
@@ -194,10 +196,10 @@ bool TMBindShadowBody::isUseThisJoint(int param_1)
 {
 	const THitActor* actor = mActor;
 	switch (actor->getActorType()) {
-	case 0x80000001:
-	case 0x8000002:
+	case ACTOR_TYPE_MARIO:
+	case ACTOR_TYPE_E_MARIO:
 		return true;
-	case 0x8000001:
+	case ACTOR_TYPE_HINOKURI2:
 		if (param_1 == 0x17)
 			return false;
 		return true;
@@ -209,12 +211,12 @@ bool TMBindShadowBody::isUseThisJoint(int param_1)
 bool TMBindShadowBody::isCircleJoint(int param_1)
 {
 	switch (mActor->getActorType()) {
-	case 0x80000001:
-	case 0x8000002:
+	case ACTOR_TYPE_MARIO:
+	case ACTOR_TYPE_E_MARIO:
 		if (param_1 == 0x1a)
 			return true;
 		return false;
-	case 0x8000001:
+	case ACTOR_TYPE_HINOKURI2:
 		if (param_1 == 0x13 || param_1 == 0x17)
 			return true;
 		return false;
@@ -226,8 +228,8 @@ bool TMBindShadowBody::isCircleJoint(int param_1)
 bool TMBindShadowBody::isBodyJoint(int param_1)
 {
 	switch (mActor->getActorType()) {
-	case 0x80000001:
-	case 0x8000002:
+	case ACTOR_TYPE_MARIO:
+	case ACTOR_TYPE_E_MARIO:
 		if (param_1 == 2 || param_1 == 0xe)
 			return true;
 		return false;
@@ -240,7 +242,7 @@ void TMBindShadowBody::entryDrawShadow()
 {
 	f32 eps = JGeometry::TUtil<f32>::epsilon();
 
-	if (mActor->mPosition.epsilonEquals(*gpMarioPos, eps)) {
+	if (mActor->mPosition.epsilonEquals(SMS_GetMarioPos(), eps)) {
 		if (!gpBindShadowManager->unk65) {
 			gpBindShadowManager->unk65 = true;
 			calc();
@@ -335,7 +337,7 @@ TMBindShadowManager::TMBindShadowManager(const char* name)
 	mShadowColor.b = 115;
 	mShadowColor.a = 180;
 
-	switch (gpApplication.mCurrArea.unk0) {
+	switch (SMSGetApplication()->mCurrArea.getStage()) {
 	case 6:
 		mShadowColor.r = 9;
 		mShadowColor.g = 9;
@@ -1176,9 +1178,10 @@ void TMBindShadowManager::drawShadow(u32 param_1, JDrama::TGraphics* param_2)
 
 		for (int i = 0; i < mRequestNum; i++) {
 			if (param_1 & 0x40000000) {
-				if (!(mQuads[i].mRequest->mActorType & 0x40000000))
+				if (!(mQuads[i].mRequest->mActorType & HIT_CATEGORY_MAP_OBJECT))
 					continue;
-			} else if (mQuads[i].mRequest->mActorType & 0x40000000) {
+			} else if (mQuads[i].mRequest->mActorType
+			           & HIT_CATEGORY_MAP_OBJECT) {
 				continue;
 			}
 
@@ -1253,39 +1256,39 @@ void TMBindShadowManager::drawShadow(u32 param_1, JDrama::TGraphics* param_2)
 	GXSetDstAlpha(GX_TRUE, 0);
 }
 
-void TMBindShadowManager::request(const TCircleShadowRequest& param_1,
-                                  u32 param_2)
+void TMBindShadowManager::request(const TCircleShadowRequest& request,
+                                  u32 actor_type)
 {
-	JGeometry::TVec3<f32> delta = param_1.mPosition;
+	JGeometry::TVec3<f32> delta = request.mPosition;
 	delta -= gpCamera->unk124;
 	f32 dist = delta.squared();
 
 	f32 range = 6.0f;
-	if (param_1.mShadowType == SHADOW_TYPE_TREE)
+	if (request.mShadowType == SHADOW_TYPE_TREE)
 		range = 10.0f;
-	if (param_1.mShadowType == SHADOW_TYPE_SQUARE)
+	if (request.mShadowType == SHADOW_TYPE_SQUARE)
 		range = 1.0f;
 
 	if (dist > 20000000.0f * range)
 		return;
 
-	if (param_1.mRadiusX < 0.01f || param_1.mRadiusZ < 0.01f)
+	if (request.mRadiusX < 0.01f || request.mRadiusZ < 0.01f)
 		return;
 
-	if (!gpMap->isInArea(param_1.mPosition.x, param_1.mPosition.z))
+	if (!gpMap->isInArea(request.mPosition.x, request.mPosition.z))
 		return;
 
-	if (isnan(param_1.mPosition.x) || isnan(param_1.mPosition.z))
+	if (isnan(request.mPosition.x) || isnan(request.mPosition.z))
 		return;
 
 	if (mRequestNum < 0x200) {
-		mRequests[mRequestNum]               = param_1;
-		mRequests[mRequestNum].mActorType    = param_2;
+		mRequests[mRequestNum]               = request;
+		mRequests[mRequestNum].mActorType    = actor_type;
 		mRequests[mRequestNum].mCameraDistSq = dist;
 
-		if (param_1.mShadowType == SHADOW_TYPE_TREE) {
+		if (request.mShadowType == SHADOW_TYPE_TREE) {
 			if (mModelShadowNum < 1) {
-				mModelShadows[mModelShadowNum].mPosition = param_1.mPosition;
+				mModelShadows[mModelShadowNum].mPosition = request.mPosition;
 				mModelShadows[mModelShadowNum].mIsFar    = false;
 				mModelShadows[mModelShadowNum].unkD      = true;
 
@@ -1300,17 +1303,17 @@ void TMBindShadowManager::request(const TCircleShadowRequest& param_1,
 	}
 }
 
-void TMBindShadowManager::forceRequest(const TCircleShadowRequest& param_1,
-                                       u32 param_2)
+void TMBindShadowManager::forceRequest(const TCircleShadowRequest& request,
+                                       u32 actor_type)
 {
-	JGeometry::TVec3<f32> pos   = param_1.mPosition;
+	JGeometry::TVec3<f32> pos   = request.mPosition;
 	JGeometry::TVec3<f32> delta = pos;
 	delta -= gpCamera->getUnk124();
 	f32 dist = delta.squared();
 
 	if (mRequestNum < 0x200) {
-		mRequests[mRequestNum]               = param_1;
-		mRequests[mRequestNum].mActorType    = param_2;
+		mRequests[mRequestNum]               = request;
+		mRequests[mRequestNum].mActorType    = actor_type;
 		mRequests[mRequestNum].mCameraDistSq = dist;
 		mRequestNum++;
 	}
@@ -1483,7 +1486,7 @@ void TMBindShadowManager::calcVtx()
 		}
 
 		f32 stretch = 1.0f;
-		if (request->mActorType == 0x80000001)
+		if (request->mActorType == ACTOR_TYPE_MARIO)
 			stretch = 1.5f;
 
 		MsMtxSetTRS(quad->mMtx, trans.x, trans.y, trans.z, rotation.x,
@@ -1560,7 +1563,7 @@ void TMBindShadowManager::calcVtx()
 				arrays[mQuadAryNum].mBlendHead = b;
 				arrays[mQuadAryNum].mBlendTail = b;
 				arrays[mQuadAryNum].unk0       = 0x20000000;
-				if (q->mRequest->mActorType & 0x40000000)
+				if (q->mRequest->mActorType & HIT_CATEGORY_MAP_OBJECT)
 					arrays[mQuadAryNum].unk0 = 0x40000000;
 				mQuadAryNum++;
 			}
@@ -1581,8 +1584,10 @@ void TMBindShadowManager::calcVtx()
 			arrays[i].mBlendTail->mNext = arrays[j].mBlendHead;
 			arrays[i].mBlendTail        = arrays[j].mBlendTail;
 
-			if ((arrays[i].mQuadHead->mRequest->mActorType & 0x40000000)
-			    || (arrays[j].mQuadHead->mRequest->mActorType & 0x40000000))
+			if ((arrays[i].mQuadHead->mRequest->mActorType
+			     & HIT_CATEGORY_MAP_OBJECT)
+			    || (arrays[j].mQuadHead->mRequest->mActorType
+			        & HIT_CATEGORY_MAP_OBJECT))
 				arrays[i].unk0 = 0x40000000;
 
 			arrays[j].mQuadHead  = nullptr;

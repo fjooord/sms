@@ -20,7 +20,7 @@
 #include <JSystem/J3D/J3DGraphAnimator/J3DModel.hpp>
 #include <JSystem/JDrama/JDRNameRefGen.hpp>
 #include <JSystem/JKernel/JKRHeap.hpp>
-#include <PowerPC_EABI_Support/Msl/MSL_C/MSL_Common/string.h>
+#include <string.h>
 #include <stdio.h>
 
 // rogue includes needed for matching sinit & bss
@@ -38,7 +38,7 @@ f32 TManhole::mVibrationDecreaseRate = 0.07f;
 
 void TDoor::touchPlayer(THitActor* param_1)
 {
-	if (param_1->isActorType(0x80000001)) {
+	if (param_1->isActorType(ACTOR_TYPE_MARIO)) {
 		u32 message = HIT_MESSAGE_UNK11;
 		if (unk138)
 			message = HIT_MESSAGE_UNK12;
@@ -76,7 +76,7 @@ void TManhole::touchPlayer(THitActor*)
 {
 	mState = STATE_NORMAL;
 	if (!animationFinished()) {
-		mPosition.y = mInitialPosition.y;
+		mPosition.y = getInitialPosition().y;
 		return;
 	}
 	if (gpMarioOriginal->getStatus() == MARIO_STATUS_HIP_DROP
@@ -101,7 +101,7 @@ void TManhole::touchPlayer(THitActor*)
 		    ->setFrame(getMActor()->getFrameCtrl(ANM_TYPE_BCK)->getFrame()
 		               + SMSGetAnmFrameRate());
 		offMapObjFlag(MAP_OBJ_FLAG_UNK100);
-		mMapCollisionManager->unk8->setAllBGType(0x400);
+		mMapCollisionManager->getActiveCollision()->setAllBGType(0x400);
 		SMSGetMSound()->startSoundActor(MSD_SE_OBJ_MANHOLE_OPEN, &mPosition, 0,
 		                                nullptr, 0, 4);
 		unk150 = 1;
@@ -119,12 +119,12 @@ void TManhole::touchPlayer(THitActor*)
 			SMSGetMSound()->startSoundActor(MSD_SE_OBJ_MANHOLE_DOWN, &mPosition,
 			                                0, nullptr, 0, 4);
 		}
-		if (mPosition.y > mInitialPosition.y - mDownHeight)
+		if (mPosition.y > getInitialPosition().y - mDownHeight)
 			mPosition.y = mPosition.y - mDownSpeed;
 		else
-			mPosition.y = mInitialPosition.y - mDownHeight;
+			mPosition.y = getInitialPosition().y - mDownHeight;
 		unk148 = 1.0f;
-		unk14C = mInitialPosition.y - mPosition.y;
+		unk14C = getInitialPosition().y - mPosition.y;
 		offMapObjFlag(MAP_OBJ_FLAG_UNK100);
 		return;
 	}
@@ -177,7 +177,7 @@ void TManhole::appeared()
 	}
 	if (unk150) {
 		if (gpMarioOriginal->mVel.y <= 0.0f) {
-			mMapCollisionManager->unk8->setAllBGType(
+			mMapCollisionManager->getActiveCollision()->setAllBGType(
 			    BG_TYPE_GROUND_POUND_TO_PASS_THROUGH);
 			unk150 = 0;
 		}
@@ -226,8 +226,7 @@ void TManhole::setGroundCollision()
 	    && mPosition.x + mBodyRadius > SMS_GetYoshi()->getTranslation().x
 	    && mPosition.z - mBodyRadius < SMS_GetYoshi()->getTranslation().z
 	    && mPosition.z + mBodyRadius > SMS_GetYoshi()->getTranslation().z) {
-		if (mMapCollisionManager->unk8)
-			mMapCollisionManager->unk8->moveTrans(mPosition);
+		mMapCollisionManager->moveActiveCollisionTrans(mPosition);
 	} else {
 		TMapObjBase::setGroundCollision();
 	}
@@ -293,8 +292,8 @@ u32 TMapObjBillboard::touchWater(THitActor* param_1)
 		rot.y -= 90.0f;
 		pos.y += mYOffset;
 		TMapObjBase* obj = mHiddenObj;
-		if (obj->isActorType(0x2000000E))
-			obj = gpItemManager->makeObjAppear(0x2000000E);
+		if (obj->isActorType(ACTOR_TYPE_COIN))
+			obj = gpItemManager->makeObjAppear(ACTOR_TYPE_COIN);
 		if (obj) {
 			TMapObjBase::throwObjFromPointWithRot(obj, pos, rot, mAppearSpeed,
 			                                      mAppearYSpeed);
@@ -308,7 +307,7 @@ u32 TMapObjBillboard::touchWater(THitActor* param_1)
 void TMapObjChangeStage::touchPlayer(THitActor*)
 {
 	gpMarDirector->setNextStage(unk138, nullptr);
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	mColCount = 0;
 	gpMSound->startSoundActor(MSD_SE_MA_WARP_EX, &mPosition, 0, nullptr, 0, 4);
 }
@@ -324,7 +323,7 @@ void TMapObjChangeStage::load(JSUMemoryInputStream& stream)
 void TMapObjChangeStageHipDrop::touchPlayer(THitActor*)
 {
 	if (SMS_IsMarioStatusHipDrop()
-	    && gpMarioPos->y + *gpMarioSpeedY < SMS_GetMarioGrLevel()) {
+	    && SMS_GetMarioPos().y + SMS_GetMarioSpeedY() < SMS_GetMarioGrLevel()) {
 		SMSGetMarDirector()->setNextStage(unk138, nullptr);
 		gpMarioParticleManager->emit(MAPOBJ_MS_EX_HAHEN, &mPosition, 0,
 		                             nullptr);
@@ -359,9 +358,9 @@ void TDamageObj::perform(u32 cue, JDrama::TGraphics* graphics)
 
 void TDamageObj::init(u32 param_1)
 {
-	initHitActor(param_1, 1, 0x80000000, 50.0f * mScaling.x,
+	initHitActor(param_1, 1, HIT_CATEGORY_PLAYER, 50.0f * mScaling.x,
 	             100.0f * mScaling.y, 0.0f, 0.0f);
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	TMapObjBase::joinToGroup("マップグループ", this);
 }
 
@@ -371,16 +370,16 @@ void TDamageObj::load(JSUMemoryInputStream& stream)
 	char name[0x20];
 	stream.readString(name, 0x20);
 	if (strcmp(name, "normal") == 0) {
-		initHitActor(0x10000036, 1, 0x80000000, 50.0f * mScaling.x,
-		             100.0f * mScaling.y, 0.0f, 0.0f);
-		offHitFlag(HIT_FLAG_NO_COLLISION);
+		initHitActor(ACTOR_TYPE_ENEMY_DAMAGE_OBJ, 1, HIT_CATEGORY_PLAYER,
+		             50.0f * mScaling.x, 100.0f * mScaling.y, 0.0f, 0.0f);
+		offHitFilter(HIT_FILTER_NO_COLLISION);
 		TMapObjBase::joinToGroup("マップグループ", this);
 		return;
 	}
 	if (strcmp(name, "water") == 0) {
-		initHitActor(0x40000053, 1, 0x80000000, 50.0f * mScaling.x,
-		             100.0f * mScaling.y, 0.0f, 0.0f);
-		offHitFlag(HIT_FLAG_NO_COLLISION);
+		initHitActor(ACTOR_TYPE_DAMAGE_OBJ, 1, HIT_CATEGORY_PLAYER,
+		             50.0f * mScaling.x, 100.0f * mScaling.y, 0.0f, 0.0f);
+		offHitFilter(HIT_FILTER_NO_COLLISION);
 		TMapObjBase::joinToGroup("マップグループ", this);
 	}
 }
@@ -392,7 +391,10 @@ void TMapObjWaterSpray::calc()
 	JPABaseEmitter* em
 	    = gpMarioParticleManager->emit(unk138, &mPosition, 1, this);
 	if (em) {
-		em->setRotation(mRotation.x, mRotation.y, mRotation.z);
+		s16 x = mRotation.x;
+		s16 y = mRotation.y;
+		s16 z = mRotation.z;
+		em->setRotation(x, y, z);
 		em->setGlobalScale(mScaling);
 		em->setRate(unk13C);
 		em->setGlobalParticleScale(unk140);
@@ -454,7 +456,7 @@ void THideObjInfo::action(s32 param_1)
 	if (obj) {
 		TMapObjBase::throwObjFromPointWithRot(obj, mPosition, mRotation, unk48,
 		                                      unk4C);
-		if (obj->isActorType(0x2000000E))
+		if (obj->isActorType(ACTOR_TYPE_COIN))
 			((TItem*)obj)->unk14C = param_1;
 	}
 }
@@ -486,6 +488,7 @@ void TMapObjSwitch::control()
 
 BOOL TMapObjSwitch::receiveMessage(THitActor*, u32 message)
 {
+	JDrama::TFlagT<u16> flag(0);
 	if (message == HIT_MESSAGE_HIP_DROP) {
 		startBck("objswitch");
 		SMSGetMSound()->startSoundActor(MSD_SE_OBJ_AP_BUTTON, &mPosition, 0,
@@ -493,11 +496,11 @@ BOOL TMapObjSwitch::receiveMessage(THitActor*, u32 message)
 		removeMapCollision();
 		for (int i = 0; i < unk13C; ++i)
 			unk144[i]->action(unk140);
-		SMSGetMarDirector()->fireStartDemoCamera(
-		    "オブジェスイッチ用カメラ", nullptr, -1, 0.0f, true, nullptr, 0,
-		    nullptr, JDrama::TFlagT<u16>(0));
+		SMSGetMarDirector()->fireStartDemoCamera("オブジェスイッチ用カメラ",
+		                                         nullptr, -1, 0.0f, true,
+		                                         nullptr, 0, nullptr, flag);
 		mStateTimer = unk140;
-		onHitFlag(HIT_FLAG_NO_COLLISION);
+		onHitFilter(HIT_FILTER_NO_COLLISION);
 		return TRUE;
 	}
 
@@ -560,7 +563,7 @@ BOOL TRedCoinSwitch::receiveMessage(THitActor*, u32 message)
 		gpMSound->startSoundActor(MSD_SE_OBJ_AP_BUTTON, &mPosition, 0, nullptr,
 		                          0, 4);
 		removeMapCollision();
-		onHitFlag(HIT_FLAG_NO_COLLISION);
+		onHitFilter(HIT_FILTER_NO_COLLISION);
 		mState = 2;
 		return TRUE;
 	}
@@ -573,12 +576,13 @@ void TRedCoinSwitch::control()
 	TMapObjBase::control();
 	switch (mState) {
 	case 1:
-		break;
+		return;
 	case 2:
 		if (getMActor()->curAnmEndsNext(ANM_TYPE_BCK, nullptr)) {
 			mStateTimer = 120;
 			mState      = 3;
-			TFlagManager::getInstance()->setBool(true, 0x50009);
+			TFlagManager::getInstance()->setBool(true,
+			                                     MSF_RED_COIN_SWITCH_PRESSED);
 		}
 		break;
 	case 3:
@@ -594,17 +598,16 @@ void TRedCoinSwitch::loadAfter()
 	for (int i = 0; i < 8; ++i) {
 		char buf[0x40];
 		snprintf(buf, 0x40, "赤コイン %d", i);
-		static_cast<TMapObjBase*>(JDrama::TNameRefGen::search(buf))
-		    ->makeObjDead();
+		TMapObjBase* obj
+		    = static_cast<TMapObjBase*>(JDrama::TNameRefGen::search(buf));
+		obj->makeObjDead();
 	}
 }
 
 void TRedCoinSwitch::load(JSUMemoryInputStream& stream)
 {
 	TMapObjBase::load(stream);
-	u32 tmp;
-	stream >> tmp;
-	unk138 = tmp;
+	unk138 = stream.readU32();
 	if (unk138 <= 0)
 		unk138 = 1200;
 	else

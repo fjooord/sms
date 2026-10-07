@@ -1,7 +1,7 @@
 #ifndef SYSTEM_STAGE_UTIL_HPP
 #define SYSTEM_STAGE_UTIL_HPP
 
-#include <types.h>
+#include <dolphin/types.h>
 #include <System/FlagManager.hpp>
 
 u8 SMS_getShineIDofExStage(u8);
@@ -70,6 +70,12 @@ static u32 scScenarioNameTable[] = {
 	0x1E, 0x21, 0x20, 0x23, 0x22, 0x1F, 0x24, 0x25, 0x26, 0x27,
 };
 
+// mario.MAP gives both SelectMenu.o (unreferenced there) and Guide.o a local
+// copy, right after the tables above, so it lives in this header too.
+static u32 scNormalStageTable[] = {
+	0, 1, 2, 3, 4, 0xd, 6, 8, 9, 0xa,
+};
+
 // size matches
 static u16 SMS_getNormalStage(u32 param_1)
 {
@@ -97,7 +103,7 @@ static s16 SMS_getShineID(u32 stage, u32 scenario, bool is_etc_shine)
 // size matches
 static bool SMS_isGetShine(u32 stage, u32 scenario, bool is_etc_shine)
 {
-	s32 shineId = SMS_getShineID(stage, scenario, is_etc_shine);
+	s16 shineId = SMS_getShineID(stage, scenario, is_etc_shine);
 	if (shineId == -1)
 		return false;
 	return TFlagManager::getInstance()->getShineFlag(shineId);

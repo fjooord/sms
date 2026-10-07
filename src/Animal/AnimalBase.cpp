@@ -55,7 +55,7 @@ void TAnimalBase::init(TLiveManager* manager)
 	mMActor = mMActorKeeper->getMActor(0);
 
 	initHitActor(mActorType, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f);
-	mHitFlags |= HIT_FLAG_NO_COLLISION;
+	mHitFilter |= HIT_FILTER_NO_COLLISION;
 	mBodyScale  = 1.0f;
 	mMarchSpeed = 0.0f;
 	mBodyRadius = 10.0f;
@@ -95,7 +95,7 @@ void TAnimalBase::initNoLoad_(TAnimalBase* other)
 {
 	other->mPosition.x = 1000.0f * (MsRandF() - 0.5f) + mPosition.x;
 	other->mPosition.z = 1000.0f * (MsRandF() - 0.5f) + mPosition.z;
-	if (mActorType == 0x800001)
+	if (mActorType == ACTOR_TYPE_ANIMAL_MEW)
 		other->mPosition.y = 1000.0f * MsRandF() + mPosition.y;
 	else
 		other->mPosition.y = mPosition.y - 250.0f * MsRandF();
@@ -107,14 +107,14 @@ void TAnimalBase::initNoLoad_(TAnimalBase* other)
 	other->mRotation.y = MsWrap(rotY, 0.0f, 360.0f);
 	other->mRotation.z = 0.0f;
 
-	other->unk3C = unk3C;
-	other->unk124->setGraph(unk124->getGraph());
+	other->setCharacter(mCharacter);
+	other->getTracer()->setGraph(unk124->getGraph());
 	other->mGroundPlane = TMap::getIllegalCheckData();
 	other->init(mManager);
 
 	static_cast<TIdxGroupObj*>(JDrama::TNameRefGen::search("敵グループ"))
 	    ->getChildren()
-	    .push_back(other);
+	    .push_back(this);
 }
 
 void TAnimalBase::load(JSUMemoryInputStream& stream)
@@ -132,7 +132,7 @@ void TAnimalBase::load(JSUMemoryInputStream& stream)
 void TAnimalBase::loadAfter()
 {
 	TNameRef::loadAfter();
-	if (mActorType == 0x800001)
+	if (mActorType == ACTOR_TYPE_ANIMAL_MEW)
 		MSoundSESystem::MSRandPlay::registerTrans(MSD_SE_OBJ_KAMOME_SOLO,
 		                                          &mPosition);
 }
@@ -145,10 +145,10 @@ void TAnimalBase::perform(u32 cue, JDrama::TGraphics* graphics)
 {
 	if (cue & CUE_MOVE) {
 		if (graphics->unk0 & 2) {
-			mLinearVelocity.zero();
+			mPositionDelta.zero();
 			control();
-			mPosition += mLinearVelocity;
-			if (mActorType == 0x800001) {
+			mPosition += mPositionDelta;
+			if (mActorType == ACTOR_TYPE_ANIMAL_MEW) {
 				SMSGetMSound()->startSeRandPlay(MSD_SE_OBJ_KAMOME_SOLO,
 				                                mInstanceIndex);
 			}
@@ -184,9 +184,8 @@ void TAnimalBase::perform(u32 cue, JDrama::TGraphics* graphics)
 			if (sharedAnmNum == 0 || mInstanceIndex < sharedAnmNum) {
 				mMActor->viewCalc();
 			} else {
-				J3DModel* shared
-				    = manager->getObj(mInstanceIndex % sharedAnmNum)
-				          ->getModel();
+				int sharedIdx      = mInstanceIndex % sharedAnmNum;
+				J3DModel* shared   = manager->getObj(sharedIdx)->getModel();
 				J3DModel* model    = getModel();
 				J3DModelData* data = model->getModelData();
 				int count          = data->getDrawMtxNum();
@@ -198,9 +197,8 @@ void TAnimalBase::perform(u32 cue, JDrama::TGraphics* graphics)
 				srcArrays[1] = (Mtx*)shared->getWeightAnmMtx(0);
 
 				for (u16 i = 0; i < count; ++i) {
-					MTXConcat(world,
-					          srcArrays[data->getDrawMtxFlag(i)]
-					                   [data->getDrawMtxIndex(i)],
+					Mtx* srcArray = srcArrays[data->getDrawMtxFlag(i)];
+					MTXConcat(world, srcArray[data->getDrawMtxIndex(i)],
 					          model->getDrawMtx(i));
 				}
 
@@ -228,7 +226,7 @@ void TAnimalBase::resetRandomCurPathNode()
 	pos.x += 1000.0f * (MsRandF() - 0.5f);
 	pos.z += 1000.0f * (MsRandF() - 0.5f);
 
-	if (mActorType == 0x800001) {
+	if (mActorType == ACTOR_TYPE_ANIMAL_MEW) {
 		pos.y += 1000.0f * (pos.y <= 1000.0f ? MsRandF() : (MsRandF() - 0.5f));
 	} else {
 		pos.y -= 250.0f * MsRandF();
@@ -303,10 +301,9 @@ void TAnimalBase::execWalk(bool moving)
 	getRotationFlyToDir(&mRotation, diff, marchSpeed, turnSpeed);
 
 	JGeometry::TQuat4<f32> quat = SMS_Eular2Quat(mRotation);
-	JGeometry::TVec3<f32> tmp;
-	// TODO: quaternions are still wrong
-	quat.rotate(JGeometry::TVec3<f32>(0.0f, 0.0f, marchSpeed), tmp);
-	mLinearVelocity = tmp;
+	JGeometry::TVec3<f32> tmp(0.0f, 0.0f, marchSpeed);
+	quat.rotate(tmp, tmp);
+	mPositionDelta = tmp;
 }
 
 // UNUSED (Size: 0x5c in MAP)

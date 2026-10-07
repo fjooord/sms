@@ -11,10 +11,10 @@ void TBaseNPC::initNpcObjCollision_(const TNpcInitInfo* init_info)
 	u32 iVar4 = 0x4000000;
 	u16 uVar5 = 2;
 	switch (mActorType) {
-	case 0x4000006:
-	case 0x400001A:
-	case 0x400001B:
-	case 0x400001D:
+	case ACTOR_TYPE_NPC_MONTE_ME:
+	case ACTOR_TYPE_NPC_SUNFLOWER_L:
+	case ACTOR_TYPE_NPC_SUNFLOWER_S:
+	case ACTOR_TYPE_NPC_BOARD:
 		uVar5 = 0;
 		iVar4 = 0;
 		break;
@@ -25,9 +25,9 @@ void TBaseNPC::initNpcObjCollision_(const TNpcInitInfo* init_info)
 	             init_info->mAttackHeight * mScaling.y,
 	             init_info->mDamageRadius * mScaling.x,
 	             init_info->mDamageHeight * mScaling.y);
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	if (uVar5 == 0)
-		onHitFlag(HIT_FLAG_CANNOT_ATTACK);
+		onHitFilter(HIT_FILTER_NO_ATTACK);
 }
 
 void TBaseNPC::execNpcObjCollision_()
@@ -38,7 +38,7 @@ void TBaseNPC::execNpcObjCollision_()
 		if (isNerveWalk()) {
 			bVar2 = false;
 		} else {
-			if (!mCollisions[i]->checkActorType(0x4000000))
+			if (!mCollisions[i]->isHitCategory(HIT_CATEGORY_NPC))
 				continue;
 
 			if (!((TBaseNPC*)mCollisions[i])->isNerveWalk())
@@ -86,17 +86,18 @@ void TBaseNPC::execNpcObjCollision_()
 		if (bVar2) {
 			mCollisions[i]->mPosition += local_4C;
 		} else {
-			mLinearVelocity += local_4C;
+			mPositionDelta += local_4C;
 		}
 	}
 }
 
 void TBaseNPC::setVariableDamageRadius_()
 {
-	const TNpcInitInfo* initInfo = SMSGetNpcInitData(mActorType - 0x4000001);
-	f32 fVar6                    = initInfo->mDamageRadius;
-	fVar6                        = mScaling.x * fVar6;
-	f32 fVar7                    = fVar6;
+	const TNpcInitInfo* initInfo
+	    = SMSGetNpcInitData(mActorType - ACTOR_TYPE_NPC_MONTE_M);
+	f32 fVar6 = initInfo->mDamageRadius;
+	fVar6     = mScaling.x * fVar6;
+	f32 fVar7 = fVar6;
 	if (isBeTrampledNpc() && !SMS_IsMarioTouchGround4cm()
 	    && SMS_GetMarioPos().y > mPosition.y) {
 		JGeometry::TVec3<f32> diff;
@@ -113,7 +114,7 @@ void TBaseNPC::setVariableDamageRadius_()
 void TBaseNPC::bind()
 {
 	JGeometry::TVec3<f32> nextPos = mPosition;
-	nextPos += mLinearVelocity;
+	nextPos += mPositionDelta;
 	nextPos += mVelocity;
 
 	mVelocity.y -= getGravityY();
@@ -144,5 +145,5 @@ void TBaseNPC::bind()
 		                                 &nextPos.z, 150.0f);
 	}
 
-	setLinearVelocity(nextPos - mPosition);
+	setPositionDelta(nextPos - mPosition);
 }

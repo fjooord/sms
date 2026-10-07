@@ -8,7 +8,8 @@
 void TMenuBase::perform(u32 cue, JDrama::TGraphics* graphics)
 {
 	if (cue & CUE_DRAW) {
-		J2DOrthoGraph orthoGraph(graphics->getViewport());
+		const JDrama::TRect& viewport = graphics->getViewport();
+		J2DOrthoGraph orthoGraph(viewport);
 		orthoGraph.setup2D();
 		unk10->draw(0, 0, &orthoGraph);
 		const JUTRect& rect = graphics->getScissor();
@@ -79,8 +80,8 @@ void TMenuPlane::perform(u32 cue, JDrama::TGraphics*)
 		                                | TMarioGamePad::MEANING_MENU_DOWN
 		                                | TMarioGamePad::MEANING_MENU_LEFT
 		                                | TMarioGamePad::MEANING_MENU_RIGHT)) {
-			unk30[unk2C]->mCharColor = unk24.get();
-			unk30[unk2C]->mGradColor = unk24.get();
+			unk30[unk2C]->mCharColor = unk24.toUInt32();
+			unk30[unk2C]->mGradColor = unk24.toUInt32();
 			if (unk10->checkFrameMeaning(TMarioGamePad::MEANING_MENU_LEFT
 			                             | TMarioGamePad::MEANING_MENU_RIGHT)) {
 				if (unk2C < unk3C) {
@@ -105,8 +106,8 @@ void TMenuPlane::perform(u32 cue, JDrama::TGraphics*)
 					unk2C = 0;
 			}
 
-			unk30[unk2C]->mCharColor = unk1C.get();
-			unk30[unk2C]->mGradColor = unk20.get();
+			unk30[unk2C]->mCharColor = unk1C.toUInt32();
+			unk30[unk2C]->mGradColor = unk20.toUInt32();
 		}
 	}
 }

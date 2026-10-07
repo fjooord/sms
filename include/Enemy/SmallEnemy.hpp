@@ -23,10 +23,10 @@ public:
 	f32 getSLGiveUpHeight() const { return mSLGiveUpHeight.get(); }
 	s32 getSLAttackWait() const { return mSLAttackWait.get(); }
 	s32 getSLFreezeWait() const { return mSLFreezeWait.get(); }
-	s32 getSLDamageRadius() const { return mSLDamageRadius.get(); }
-	s32 getSLDamageHeight() const { return mSLDamageHeight.get(); }
-	s32 getSLAttackRadius() const { return mSLAttackRadius.get(); }
-	s32 getSLAttackHeight() const { return mSLAttackHeight.get(); }
+	f32 getSLDamageRadius() const { return mSLDamageRadius.get(); }
+	f32 getSLDamageHeight() const { return mSLDamageHeight.get(); }
+	f32 getSLAttackRadius() const { return mSLAttackRadius.get(); }
+	f32 getSLAttackHeight() const { return mSLAttackHeight.get(); }
 	f32 getSLTurnSpeedLow() const { return mSLTurnSpeedLow.get(); }
 	f32 getSLTurnSpeedHigh() const { return mSLTurnSpeedHigh.get(); }
 	f32 getSLBodyScaleLow() const { return mSLBodyScaleLow.get(); }
@@ -144,7 +144,7 @@ public:
 	virtual void attackToMario();
 	virtual void forceKill();
 	virtual void setMActorAndKeeper();
-	virtual void initAttacker(THitActor*);
+	virtual void initAttacker(THitActor*) { unk184 = 1; }
 	virtual bool isHitValid(u32)
 	{
 		return checkLiveFlag(LIVE_FLAG_HIDDEN) ? false : true;
@@ -201,7 +201,8 @@ public:
 	}
 
 	enum {
-		LIVE_FLAG_MELT_ON_DEATH = 0x10000,
+		LIVE_FLAG_MELT_ON_DEATH
+		= VERSION_SELECT(GMSJ01(0x10000), GMSP01(0x20000)),
 	};
 
 public:

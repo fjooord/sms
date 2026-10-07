@@ -74,11 +74,11 @@ void TWalker::bind(TLiveActor* param_1)
 	}
 
 	TSpineEnemy* enemy             = (TSpineEnemy*)param_1;
-	JGeometry::TVec3<f32> lv       = enemy->mLinearVelocity;
+	JGeometry::TVec3<f32> lv       = enemy->mPositionDelta;
 	JGeometry::TVec3<f32> local_30 = enemy->mPosition;
 	local_30 += lv;
 	unk1C = 0;
-	if (enemy->checkLiveFlag2(LIVE_FLAG_AIRBORNE)) {
+	if (enemy->isAirborne()) {
 		JGeometry::TVec3<f32> local_3c = enemy->mVelocity;
 		local_30 += local_3c;
 		local_3c.y -= enemy->getGravityY();
@@ -102,7 +102,7 @@ void TWalker::bind(TLiveActor* param_1)
 		fVar1 += 1.0f;
 
 		if (unk30 == 2 && enemy->mPosition.y - local_30.y > 0.0f
-		    && !local_40->checkFlag(BG_CHECK_FLAG_ILLEGAL)) {
+		    && !local_40->isIllegalData()) {
 			if (!local_40->isEnemyThrough()) {
 				f32 dVar16;
 				const TBGCheckData* local_44;
@@ -123,7 +123,7 @@ void TWalker::bind(TLiveActor* param_1)
 			}
 		}
 
-		if (local_40->checkFlag(BG_CHECK_FLAG_ILLEGAL)) {
+		if (local_40->isIllegalData()) {
 			if (unk20 <= 0) {
 				enemy->kill();
 				return;
@@ -136,8 +136,7 @@ void TWalker::bind(TLiveActor* param_1)
 			unk20 = 30;
 		}
 
-		if (fVar1 + 0.05f <= local_30.y
-		    && !local_40->checkFlag(BG_CHECK_FLAG_ILLEGAL)
+		if (local_30.y <= fVar1 + 0.05f && !local_40->isIllegalData()
 		    && !local_40->isEnemyThrough()) {
 			local_30.y       = fVar1;
 			enemy->mVelocity = JGeometry::TVec3<f32>(0.0f, 0.0f, 0.0f);
@@ -171,8 +170,8 @@ void TWalker::bind(TLiveActor* param_1)
 			unk24 += 1;
 		} else {
 			enemy->unk138 = pTVar14;
-			if (!enemy->checkLiveFlag2(LIVE_FLAG_AIRBORNE)
-			    && pTVar14->mMaxY - f31 <= unk18 && pTVar14->isPool()) {
+			if (!enemy->isAirborne() && pTVar14->mMaxY - f31 <= unk18
+			    && pTVar14->isPool()) {
 				unk1C = 1;
 			}
 
@@ -183,7 +182,7 @@ void TWalker::bind(TLiveActor* param_1)
 			local_94.cross(normal, JGeometry::TVec3<f32>(0.0f, 1.0f, 0.0f));
 			local_94.normalize();
 			if (unk14 == 0) {
-				JGeometry::TVec3<f32> lv = enemy->mLinearVelocity;
+				JGeometry::TVec3<f32> lv = enemy->mPositionDelta;
 				if (lv.dot(local_94) > 0.0f) {
 					unk14 = 2;
 				} else {
@@ -247,10 +246,10 @@ void TWalker::bind(TLiveActor* param_1)
 	}
 
 	JGeometry::TVec3<f32> local_218;
-	local_218.x            = local_70.mCenter.x;
-	local_218.y            = local_30.y;
-	local_218.z            = local_70.mCenter.z;
-	enemy->mLinearVelocity = local_218 - enemy->mPosition;
+	local_218.x           = local_70.mCenter.x;
+	local_218.y           = local_30.y;
+	local_218.z           = local_70.mCenter.z;
+	enemy->mPositionDelta = local_218 - enemy->mPosition;
 }
 
 void TWalker::setMode(int param_1)

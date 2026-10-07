@@ -42,7 +42,7 @@
 #include <MSound/MSoundBGM.hpp>
 #include <M3DUtil/InfectiousStrings.hpp>
 
-const char* killer_bastable[] = {
+static const char* killer_bastable[] = {
 	"/scene/killer/bas/downkiller_down1.bas", nullptr, nullptr,
 	"/scene/killer/bas/killer_search1.bas",   nullptr,
 };
@@ -64,9 +64,9 @@ void TCoasterEnemy::moveObject() { TWalkerEnemy::moveObject(); }
 void TCoasterEnemy::bind()
 {
 	JGeometry::TVec3<f32> nextPos = mPosition;
-	nextPos += mLinearVelocity;
+	nextPos += mPositionDelta;
 	nextPos += mVelocity;
-	setLinearVelocity(nextPos - mPosition);
+	setPositionDelta(nextPos - mPosition);
 }
 
 void TCoasterEnemy::reset()
@@ -107,15 +107,12 @@ void TCoasterEnemy::moveCoaster()
 	JGeometry::TVec3<f32> forward;
 	mQuat.getZDir(forward);
 
-	JGeometry::TVec3<f32> axis;
-	axis.cross(forward, delta);
-
 	JGeometry::TVec3<f32> up;
 	mQuat.getYDir(up);
 
 	JGeometry::TQuat4<f32> steer;
-	steer.setRotate(forward, axis, 0.1f);
-	mQuat.mul(steer);
+	steer.setRotate(forward, delta, 0.1f);
+	mQuat.mul(steer, mQuat);
 
 	// Y-axis rotation
 	JGeometry::TVec3<f32> right;
@@ -130,7 +127,7 @@ void TCoasterEnemy::moveCoaster()
 		tiltQuat.rotate(forward, curUp);
 
 		steer.setRotate(up, curUp, 0.1f);
-		mQuat.mul(steer);
+		mQuat.mul(steer, mQuat);
 	}
 
 	static_cast<JGeometry::TVec4<f32>&>(mQuat).normalize();
@@ -143,11 +140,6 @@ void TCoasterEnemy::calcRootMatrix()
 	pos.setQT(mQuat, mPosition);
 	getModel()->setBaseScale(mScaling);
 	getModel()->setBaseTRMtx(pos);
-}
-
-void TCoasterEnemy::setNormalFlyAnm()
-{
-	// nothing
 }
 
 void TCoasterEnemy::setWalkAnm() { setNormalFlyAnm(); }
@@ -192,9 +184,9 @@ TCoasterKiller::TCoasterKiller(const char* name)
 void TCoasterKiller::init(TLiveManager* mgr)
 {
 	TCoasterEnemy::init(mgr);
-	mActorType = 0x0800001F;
+	mActorType = ACTOR_TYPE_COASTER_KILLER;
 	unk150     = 17;
-	onLiveFlag(LIVE_FLAG_UNK400);
+	onLiveFlag(LIVE_FLAG_FORCE_SHADOW);
 	offLiveFlag(LIVE_FLAG_UNK800);
 
 	GXColorS10& bodyColor = getBodyColor(); // @hack, gets stack right
@@ -290,11 +282,11 @@ bool TCoasterKiller::isCollidMove(THitActor* param_1)
 		return false;
 	}
 
-	if (param_1->isActorType(0x0800001F)) {
+	if (param_1->isActorType(ACTOR_TYPE_COASTER_KILLER)) {
 		mSpine->pushNerve(&TNerveCoasterKillerExplosion::theNerve());
 	}
 
-	if (param_1->isActorType(0x1000002B)
+	if (param_1->isActorType(ACTOR_TYPE_ROCKET)
 	    && static_cast<TRocket*>(param_1)->isAttack()) {
 		mSpine->pushNerve(&TNerveCoasterKillerExplosion::theNerve());
 	}
@@ -346,7 +338,7 @@ DEFINE_NERVE(TNerveCoasterKillerExplosion, TLiveActor)
 	if (self->unk190 < self->get1AC()) {
 		self->unk190 *= 1.3f;
 	} else {
-		self->onHitFlag(HIT_FLAG_NO_COLLISION);
+		self->onHitFilter(HIT_FILTER_NO_COLLISION);
 		if (self->checkCurAnmEnd(0)) {
 			self->onLiveFlag(LIVE_FLAG_DEAD);
 			self->onLiveFlag(LIVE_FLAG_UNK8);
@@ -377,10 +369,10 @@ TCoasterKillerManager::TCoasterKillerManager(const char* name)
 
 void TCoasterKillerManager::load(JSUMemoryInputStream& stream)
 {
-	(void)(unk38 ? unk38 : unk38); // @hack to force cmplwi
+	ASSERT_TEST(!unk38);
 	TSmallEnemyManager::load(stream);
 	unk38 = new TCoasterKillerSaveLoadParams("/enemy/coasterkiller.prm");
-	unk38 = unk38 ? unk38 : unk38; // @hack to force cmplwi
+	ASSERT_TEST(unk38);
 }
 
 void TCoasterKillerManager::loadAfter()

@@ -236,10 +236,10 @@ void THino2Hit::perform(u32 cue, JDrama::TGraphics* graphics)
 		if (mJointIdx != 0x10 && mJointIdx != 0x9)
 			continue;
 
-		if (col->isActorType(0x80000001)) {
+		if (col->isActorType(ACTOR_TYPE_MARIO)) {
 			col->receiveMessage(this, HIT_MESSAGE_ATTACK);
-		} else if ((col->isActorType(0x10000003)
-		            || col->isActorType(0x10000002))
+		} else if ((col->isActorType(ACTOR_TYPE_NAME_KURI)
+		            || col->isActorType(ACTOR_TYPE_HAMU_KURI))
 		           && mOwner->getMActor()->checkCurBckFromIndex(0xE)) {
 			col->receiveMessage(this, HIT_MESSAGE_HIP_DROP);
 		}
@@ -249,28 +249,28 @@ void THino2Hit::perform(u32 cue, JDrama::TGraphics* graphics)
 BOOL THino2Hit::receiveMessage(THitActor* sender, u32 message)
 {
 	if (mJointIdx == 0x19) {
-		if (sender->getActorType() == 0x80000001) {
+		if (sender->getActorType() == ACTOR_TYPE_MARIO) {
 			mOwner->mJointIdxMessageCameFrom = mJointIdx;
 			return mOwner->receiveMessage(sender, message);
 		}
-		if (sender->getActorType() == 0x1000001
+		if (sender->getActorType() == ACTOR_TYPE_WATER
 		    && message == HIT_MESSAGE_SPRAYED_BY_WATER) {
 			mOwner->mJointIdxMessageCameFrom = mJointIdx;
 			return mOwner->receiveMessage(sender, message);
 		}
-		if (sender->getActorType() == 0x4000005a) {
+		if (sender->getActorType() == ACTOR_TYPE_WOOD_BARREL) {
 			mOwner->mJointIdxMessageCameFrom = mJointIdx;
 			return mOwner->receiveMessage(sender, message);
 		}
 	}
 
 	if (mJointIdx == 0x13) {
-		if (sender->getActorType() == 0x1000001
+		if (sender->getActorType() == ACTOR_TYPE_WATER
 		    && message == HIT_MESSAGE_SPRAYED_BY_WATER) {
 			mOwner->mJointIdxMessageCameFrom = mJointIdx;
 			return mOwner->receiveMessage(sender, message);
 		}
-		if (sender->getActorType() == 0x4000005a) {
+		if (sender->getActorType() == ACTOR_TYPE_WOOD_BARREL) {
 			mOwner->mJointIdxMessageCameFrom = mJointIdx;
 			return mOwner->receiveMessage(sender, message);
 		}
@@ -327,7 +327,7 @@ void THino2Mask::perform(u32 cue, JDrama::TGraphics* graphics)
 				return;
 			}
 
-			f32 gravity = unk0->getSaveParam()->mSLGravityY.get();
+			f32 gravity = unk0->getSaveParams()->mSLGravityY.get();
 
 			unk40.x -= gravity;
 			unk34.x -= gravity;
@@ -460,10 +460,10 @@ void THinokuri2::init(TLiveManager* param_1)
 	unk124->init(gpConductor->getGraphByName("hinokuri"));
 	mSpine->initWith(&TNerveHino2Appear::theNerve());
 	reset();
-	mGravity = getSaveParam()->mSLGravityY.get();
+	mGravity = ((THino2Params*)getSaveParam())->mSLGravityY.get();
 	initAnmSound();
-	initHitActor(0x8000001, 5, 0, mBodyRadius, mHeadHeight, mBodyRadius,
-	             mHeadHeight);
+	initHitActor(ACTOR_TYPE_HINOKURI2, 5, 0, mBodyRadius, mHeadHeight,
+	             mBodyRadius, mHeadHeight);
 	unk150 = new TMBindShadowBody(this, getModel(), 1.0f);
 
 	TIdxGroupObj* enemiesGrp
@@ -473,16 +473,21 @@ void THinokuri2::init(TLiveManager* param_1)
 	enemiesGrp->getChildren().push_back(unk178);
 	enemiesGrp->getChildren().push_back(unk174);
 
-	mHead->initHitActor(0x8000001, 5, 0x41000000, mHead->getAttackRadius(),
-	                    mHead->getAttackHeight(), mHead->getDamageRadius(),
-	                    mHead->getDamageHeight());
-	mBody->initHitActor(0x8000001, 5, -0x3f000000, mHead->getAttackRadius(),
-	                    mHead->getAttackHeight(), mHead->getDamageRadius(),
-	                    mHead->getDamageHeight());
-	unk174->initHitActor(0x8000001, 5, -0x70000000, 70.0f, 120.0f, 70.0f,
-	                     120.0f);
-	unk178->initHitActor(0x8000001, 5, -0x70000000, 70.0f, 120.0f, 70.0f,
-	                     120.0f);
+	mHead->initHitActor(ACTOR_TYPE_HINOKURI2, 5,
+	                    HIT_CATEGORY_MAP_OBJECT | HIT_CATEGORY_WATER,
+	                    mHead->getAttackRadius(), mHead->getAttackHeight(),
+	                    mHead->getDamageRadius(), mHead->getDamageHeight());
+	mBody->initHitActor(ACTOR_TYPE_HINOKURI2, 5,
+	                    HIT_CATEGORY_PLAYER | HIT_CATEGORY_MAP_OBJECT
+	                        | HIT_CATEGORY_WATER,
+	                    mHead->getAttackRadius(), mHead->getAttackHeight(),
+	                    mHead->getDamageRadius(), mHead->getDamageHeight());
+	unk174->initHitActor(ACTOR_TYPE_HINOKURI2, 5,
+	                     HIT_CATEGORY_PLAYER | HIT_CATEGORY_ENEMY, 70.0f,
+	                     120.0f, 70.0f, 120.0f);
+	unk178->initHitActor(ACTOR_TYPE_HINOKURI2, 5,
+	                     HIT_CATEGORY_PLAYER | HIT_CATEGORY_ENEMY, 70.0f,
+	                     120.0f, 70.0f, 120.0f);
 
 	validateCollisionAll();
 
@@ -567,8 +572,8 @@ template <class T> static inline T randy(T l, T r)
 
 void THinokuri2::resetPolInterval()
 {
-	int l  = getSaveParam()->mSLPolIntervalMin.value;
-	int r  = getSaveParam()->mSLPolIntervalMax.value;
+	int l  = ((THino2Params*)getSaveParam())->mSLPolIntervalMin.value;
+	int r  = ((THino2Params*)getSaveParam())->mSLPolIntervalMax.value;
 	unk164 = randy(l, r);
 }
 
@@ -576,20 +581,20 @@ void THinokuri2::resetPolInterval()
 
 void THinokuri2::invalidateCollisionAll()
 {
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	mHead->onHitFlag(HIT_FLAG_NO_COLLISION);
-	mBody->onHitFlag(HIT_FLAG_NO_COLLISION);
-	unk174->onHitFlag(HIT_FLAG_NO_COLLISION);
-	unk178->onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	mHead->onHitFilter(HIT_FILTER_NO_COLLISION);
+	mBody->onHitFilter(HIT_FILTER_NO_COLLISION);
+	unk174->onHitFilter(HIT_FILTER_NO_COLLISION);
+	unk178->onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void THinokuri2::validateCollisionAll()
 {
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	mHead->offHitFlag(HIT_FLAG_NO_COLLISION);
-	mBody->offHitFlag(HIT_FLAG_NO_COLLISION);
-	unk174->offHitFlag(HIT_FLAG_NO_COLLISION);
-	unk178->offHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	mHead->offHitFilter(HIT_FILTER_NO_COLLISION);
+	mBody->offHitFilter(HIT_FILTER_NO_COLLISION);
+	unk174->offHitFilter(HIT_FILTER_NO_COLLISION);
+	unk178->offHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void THinokuri2::emitWaterParticle()
@@ -602,7 +607,7 @@ void THinokuri2::emitWaterParticle()
 		getJointTransByIndex(0x19, &position);
 	} else {
 		position = mPosition;
-		position.y += getSaveParam()->mSLWaterEmitPos.get();
+		position.y += ((THino2Params*)getSaveParam())->mSLWaterEmitPos.get();
 	}
 	unk19C->mPos.value = position;
 	gpModelWaterManager->emitRequest(*unk19C);
@@ -624,7 +629,7 @@ void THinokuri2::setLevel(int level)
 	// (which shouldn't really ever happen but still)
 	const char* graphName;
 
-	if (THino2Params* prms = getSaveParam()) {
+	if (THino2Params* prms = ((THino2Params*)getSaveParam())) {
 		switch (mLevel) {
 		case 0:
 			graphName   = "hinokuri";
@@ -712,7 +717,8 @@ void THinokuri2::changeBck(int param_1)
 	J3DFrameCtrl* pJVar7 = getMActor()->getFrameCtrl(ANM_TYPE_BCK);
 	if (pJVar7 != nullptr) {
 		if (mLevel == 0 && (param_1 - 23U <= 1 || param_1 - 26U <= 1))
-			pJVar7->setRate(getSaveParam()->mSLWalkSpeedRateLv0.get());
+			pJVar7->setRate(
+			    ((THino2Params*)getSaveParam())->mSLWalkSpeedRateLv0.get());
 		else
 			pJVar7->setRate(1.0f);
 	}
@@ -720,11 +726,12 @@ void THinokuri2::changeBck(int param_1)
 
 BOOL THinokuri2::receiveMessageLv0(THitActor* sender, u32 message)
 {
-	if (mJointIdxMessageCameFrom == 0x13 && sender->getActorType() == 0x1000001
+	if (mJointIdxMessageCameFrom == 0x13
+	    && sender->getActorType() == ACTOR_TYPE_WATER
 	    && message == HIT_MESSAGE_SPRAYED_BY_WATER)
 		return true;
 
-	if (sender->getActorType() == 0x1000001
+	if (sender->getActorType() == ACTOR_TYPE_WATER
 	    && message == HIT_MESSAGE_SPRAYED_BY_WATER) {
 		if (mJointIdxMessageCameFrom != 0x19)
 			return true;
@@ -733,7 +740,7 @@ BOOL THinokuri2::receiveMessageLv0(THitActor* sender, u32 message)
 			mSpine->pushNerve(&TNerveHino2Freeze::theNerve());
 	}
 
-	if (sender->getActorType() == 0x80000001
+	if (sender->getActorType() == ACTOR_TYPE_MARIO
 	    && message == HIT_MESSAGE_TRAMPLE) {
 		if (mJointIdxMessageCameFrom != 0x19)
 			return true;
@@ -750,11 +757,12 @@ BOOL THinokuri2::receiveMessageLv0(THitActor* sender, u32 message)
 
 BOOL THinokuri2::receiveMessageLv1(THitActor* sender, u32 message)
 {
-	if (mJointIdxMessageCameFrom == 0x13 && sender->getActorType() == 0x1000001
+	if (mJointIdxMessageCameFrom == 0x13
+	    && sender->getActorType() == ACTOR_TYPE_WATER
 	    && message == HIT_MESSAGE_SPRAYED_BY_WATER)
 		return true;
 
-	if (unk180 && sender->getActorType() == 0x1000001
+	if (unk180 && sender->getActorType() == ACTOR_TYPE_WATER
 	    && message == HIT_MESSAGE_SPRAYED_BY_WATER) {
 		if (mJointIdxMessageCameFrom != 0x19)
 			return true;
@@ -778,7 +786,7 @@ BOOL THinokuri2::receiveMessageLv1(THitActor* sender, u32 message)
 		return true;
 	}
 
-	if (unk180 && sender->getActorType() == 0x4000005A) {
+	if (unk180 && sender->getActorType() == ACTOR_TYPE_WOOD_BARREL) {
 		if (mJointIdxMessageCameFrom != 0x19)
 			return true;
 
@@ -796,7 +804,7 @@ BOOL THinokuri2::receiveMessageLv1(THitActor* sender, u32 message)
 
 BOOL THinokuri2::receiveMessageLv2(THitActor* sender, u32 message)
 {
-	if (sender->getActorType() == 0x1000001
+	if (sender->getActorType() == ACTOR_TYPE_WATER
 	    && message == HIT_MESSAGE_SPRAYED_BY_WATER) {
 		if (mJointIdxMessageCameFrom != 0x13)
 			return true;
@@ -810,7 +818,7 @@ BOOL THinokuri2::receiveMessageLv2(THitActor* sender, u32 message)
 		unk190 += 1;
 		unk1A4->unkC += 1;
 
-		unk168 = getSaveParam()->mSLInvincibleTimer.get();
+		unk168 = ((THino2Params*)getSaveParam())->mSLInvincibleTimer.get();
 
 		if (unk190 > 2) {
 			unk190 = 0;
@@ -824,14 +832,14 @@ BOOL THinokuri2::receiveMessageLv2(THitActor* sender, u32 message)
 		return true;
 	}
 
-	if (sender->getActorType() == 0x4000005A) {
+	if (sender->getActorType() == ACTOR_TYPE_WOOD_BARREL) {
 		if (mJointIdxMessageCameFrom != 0x13)
 			return true;
 
 		unk190 += 1;
 		unk1A4->unkC += 1;
 
-		unk168 = getSaveParam()->mSLInvincibleTimer.get();
+		unk168 = ((THino2Params*)getSaveParam())->mSLInvincibleTimer.get();
 
 		if (unk190 > 2) {
 			unk190 = 0;
@@ -870,11 +878,6 @@ BOOL THinokuri2::receiveMessage(THitActor* sender, u32 message)
 	return 0;
 }
 
-template <class T> static inline T symmetric_clamp(T v, T r)
-{
-	return v > 0 ? (v > r ? v : r) : (v > -r ? -r : v);
-}
-
 void THinokuri2::moveObject()
 {
 	if (checkLiveFlag(LIVE_FLAG_DEAD))
@@ -885,11 +888,13 @@ void THinokuri2::moveObject()
 
 	if (mLevel == 1) {
 		f32 dhp    = calcHitPoints() - mHitPoints;
-		f32 fVar12 = (getSaveParam()->getSLDamageHeadScale() - 1.0f)
-		                 * (1.0f + dhp / calcHitPoints())
+		f32 fVar12 = 1.0f
+		             + (getSaveParams()->getSLDamageHeadScale() - 1.0f)
+		                   * (dhp / calcHitPoints())
 		             - unk194;
 
-		unk194 += symmetric_clamp(fVar12, 0.004f);
+		unk194
+		    += fVar12 > 0.0f ? MsMin(fVar12, 0.004f) : MsMax(fVar12, -0.004f);
 	} else {
 		unk194 = 1.0f;
 	}
@@ -898,29 +903,28 @@ void THinokuri2::moveObject()
 		generateEnemy();
 
 	doShortCut();
-	mLinearVelocity.zero();
-	mAngularVelocity.zero();
+	mPositionDelta.zero();
+	mRotationDelta.zero();
 	if (mMapCollisionManager != nullptr) {
 		JGeometry::TVec3<f32> aTStack_30;
 		getJointTransByIndex(0x17, &aTStack_30);
-		if (mMapCollisionManager->unk8)
-			mMapCollisionManager->unk8->moveTrans(aTStack_30);
+		mMapCollisionManager->moveActiveCollisionTrans(aTStack_30);
 	}
 
-	f32 headHitR = getSaveParam()->mSLHeadHitR.value;
+	f32 headHitR = getSaveParams()->mSLHeadHitR.value;
 	mHead->setDamageRadius(unk194 * (headHitR * mBodyScale));
-	f32 bodyScale = getSaveParam()->mSLBodyScale.value;
-	mHead->setDamageHeight(unk194 * (mBodyScale * bodyScale));
+	f32 headHitH = getSaveParams()->mSLHeadHitH.value;
+	mHead->setDamageHeight(unk194 * (headHitH * mBodyScale));
 
 	if (mLevel == 0) {
-		f32 bodyHitR0 = getSaveParam()->mSLBodyHitR0.value;
+		f32 bodyHitR0 = getSaveParams()->mSLBodyHitR0.value;
 		mBody->setDamageRadius(unk194 * (bodyHitR0 * mBodyScale));
-		f32 bodyHitH0 = getSaveParam()->mSLBodyHitH0.value;
+		f32 bodyHitH0 = getSaveParams()->mSLBodyHitH0.value;
 		mBody->setDamageHeight(unk194 * (bodyHitH0 * mBodyScale));
 	} else {
-		f32 bodyHitR = getSaveParam()->mSLBodyHitR.value;
+		f32 bodyHitR = getSaveParams()->mSLBodyHitR.value;
 		mBody->setDamageRadius(unk194 * (bodyHitR * mBodyScale));
-		f32 bodyHitH = getSaveParam()->mSLBodyHitH.value;
+		f32 bodyHitH = getSaveParams()->mSLBodyHitH.value;
 		mBody->setDamageHeight(unk194 * (bodyHitH * mBodyScale));
 	}
 
@@ -931,17 +935,17 @@ void THinokuri2::moveObject()
 	control();
 	bind();
 
-	mPosition += mLinearVelocity;
-	mRotation += mAngularVelocity;
+	mPosition += mPositionDelta;
+	mRotation += mRotationDelta;
 
 	unk198
 	    += -MsClamp(MsWrap(MsAngleDiff(mRotation.y, oldRot), -180.0f, 180.0f),
 	                -30.0f, 30.0f)
-	       * getSaveParam()->mSLBankProp.get();
+	       * getSaveParams()->mSLBankProp.get();
 
 	unk198 = MsWrap(unk198, -180.0f, 180.0f);
 
-	f32 prop = getSaveParam()->mSLBankLimit.get();
+	f32 prop = getSaveParams()->mSLBankLimit.get();
 	unk198   = MsClamp(unk198, -prop, prop);
 
 	// looks like symmetric_clamp but it isn't???
@@ -1076,7 +1080,7 @@ DEFINE_NERVE(TNerveHino2GraphWander, TLiveActor)
 	int frame = self->getMActor()->getFrameCtrl(ANM_TYPE_BCK)->getFrame();
 	if (self->getLevel() != 0 && !self->checkLiveFlag(LIVE_FLAG_CLIPPED_OUT)
 	    && !self->isAirborne() && (frame == 0x24 || frame == 0x55)) {
-		f32 ws = self->getSaveParam()->mSLWalkShake.get();
+		f32 ws = ((THino2Params*)self->getSaveParam())->mSLWalkShake.get();
 		if (!(ws * ws < self->mDistToMarioSquared))
 			gpCameraShake->startShake(CAM_SHAKE_MODE_UNK3, 0.8f);
 
@@ -1135,7 +1139,7 @@ DEFINE_NERVE(TNerveHino2Landing, TLiveActor)
 
 	if (spine->getTime() == 0) {
 		self->changeBck(0xE);
-		f32 js = self->getSaveParam()->mSLJumpShake.get();
+		f32 js = ((THino2Params*)self->getSaveParam())->mSLJumpShake.get();
 		if (!(js * js < self->mDistToMarioSquared))
 			gpCameraShake->startShake(CAM_SHAKE_MODE_UNK4, 0.8f);
 	}
@@ -1166,11 +1170,16 @@ DEFINE_NERVE(TNerveHino2Turn, TLiveActor)
 		self->changeBck(0x15);
 	}
 
-	f32 fVar3 = symmetric_clamp(angleDiff, self->mTurnSpeed);
+	f32 turnSpeed = self->mTurnSpeed;
+	f32 turn;
+	if (angleDiff > 0.0f)
+		turn = MsMin(angleDiff, turnSpeed);
+	else
+		turn = MsMax(angleDiff, -turnSpeed);
 
-	self->mRotation.y = MsWrap(self->mRotation.y + fVar3, 0.0f, 360.0f);
+	self->mRotation.y = MsWrap(self->mRotation.y + turn, 0.0f, 360.0f);
 
-	if (fabsf(fVar3) < self->mTurnSpeed * 0.5f)
+	if (fabsf(turn) < self->mTurnSpeed * 0.5f)
 		return true;
 
 	return false;
@@ -1188,9 +1197,9 @@ DEFINE_NERVE(TNerveHino2PrePol, TLiveActor)
 			int uVar5 = self->mWaitTimer;
 			uVar5 += 1;
 
-			int wait = self->getSaveParam()->mSLPrePolWait.get();
+			int wait = self->getSaveParams()->mSLPrePolWait.get();
 			if (wait > uVar5) {
-				f32 prob = self->getSaveParam()->mSLStampProb.get();
+				f32 prob = self->getSaveParams()->mSLStampProb.get();
 				if (rand() * (1.0f / (RAND_MAX + 1)) < prob) {
 					spine->pushAfterCurrent(&TNerveHino2Pollute::theNerve());
 				} else {
@@ -1230,7 +1239,8 @@ DEFINE_NERVE(TNerveHino2Pollute, TLiveActor)
 		if (self->getMActor()->curAnmEndsNext()) {
 			int uVar1 = self->mWaitTimer;
 			++uVar1;
-			int polWait = self->getSaveParam()->mSLPolWaitCount.get();
+			int polWait
+			    = ((THino2Params*)self->getSaveParam())->mSLPolWaitCount.get();
 			if (uVar1 > polWait) {
 				self->unk180 = FALSE;
 				self->changeBck(3);
@@ -1304,7 +1314,8 @@ DEFINE_NERVE(TNerveHino2Damage, TLiveActor)
 		}
 	}
 
-	if (spine->getTime() >= self->getSaveParam()->getSLDamageTimer()) {
+	if (spine->getTime()
+	    >= ((THino2Params*)self->getSaveParam())->getSLDamageTimer()) {
 		self->unk180 = FALSE;
 		if (self->getHitPoints() == 0) {
 			spine->pushAfterCurrent(&TNerveHino2Squat::theNerve());
@@ -1341,7 +1352,7 @@ DEFINE_NERVE(TNerveHino2Squat, TLiveActor)
 
 	if (self->getMActor()->curAnmEndsNext()) {
 		if (self->mCurrentBck == 0x13) {
-			f32 js = self->getSaveParam()->mSLJumpShake.get();
+			f32 js = ((THino2Params*)self->getSaveParam())->mSLJumpShake.get();
 			if (!(js * js < self->mDistToMarioSquared))
 				gpCameraShake->startShake(CAM_SHAKE_MODE_UNK4, 0.8f);
 			self->changeBck(0x14);
@@ -1385,7 +1396,7 @@ DEFINE_NERVE(TNerveHino2Die, TLiveActor)
 		self->changeBck(0xD);
 		JGeometry::TVec3<f32> local_1C = self->mPosition;
 		gpItemManager->makeObjAppear(local_1C.x, local_1C.y, local_1C.z,
-		                             0x2000000E, false);
+		                             ACTOR_TYPE_COIN, false);
 		self->invalidateCollisionAll();
 		self->emitWaterParticle();
 	}
@@ -1413,7 +1424,8 @@ DEFINE_NERVE(TNerveHino2Stamp, TLiveActor)
 	if (self->getMActor()->curAnmEndsNext()) {
 		int uVar7 = self->getUnk160();
 		++uVar7;
-		int stampCnt = self->getSaveParam()->mSLStampCount.get();
+		int stampCnt
+		    = ((THino2Params*)self->getSaveParam())->mSLStampCount.get();
 		if (uVar7 > stampCnt) {
 			self->setUnk160(0);
 			self->resetPolInterval();
@@ -1425,14 +1437,14 @@ DEFINE_NERVE(TNerveHino2Stamp, TLiveActor)
 
 	int frame = self->getMActor()->getFrameCtrl(ANM_TYPE_BCK)->getFrame();
 	if (!self->isAirborne() && (frame == 0x1C || frame == 0x3E)) {
-		f32 js = self->getSaveParam()->mSLJumpShake.get();
+		f32 js = ((THino2Params*)self->getSaveParam())->mSLJumpShake.get();
 		if (!(js * js < self->getDistToMarioSquared()))
 			gpCameraShake->startShake(CAM_SHAKE_MODE_UNK4, 0.8f);
 
-		f32 sql = self->getSaveParam()->mSLStampQuakeLen.get();
+		f32 sql = ((THino2Params*)self->getSaveParam())->mSLStampQuakeLen.get();
 		sql     = sql * sql;
 		if (self->getDistToMarioSquared() < sql)
-			SMS_SendMessageToMario(self, 3);
+			SMS_SendMessageToMario(self, HIT_MESSAGE_SUPER_HIP_DROP);
 	}
 
 	return false;
@@ -1445,7 +1457,7 @@ DEFINE_NERVE(TNerveHino2Freeze, TLiveActor)
 		self->changeBck(0x16);
 		self->unk184 = 1;
 	}
-	int timer = self->getSaveParam()->getSLFreezeTimerLv0();
+	int timer = ((THino2Params*)self->getSaveParam())->getSLFreezeTimerLv0();
 	if (spine->getTime() >= timer) {
 		self->unk184 = 0;
 		return true;

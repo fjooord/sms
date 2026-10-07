@@ -50,7 +50,9 @@ void TSilhouette::loadAfter()
 	// three sample points atten = {0.9, 0.5, 0.05} at distances
 	// d = {30, 650, 1500}. k0 is eliminated by subtracting adjacent equations
 	// scaled by a[i]*a[i+1], leaving a 2x2 system solved via Cramer's rule.
-	f32 m[3][2];
+	f32 m2[2];
+	f32 m1[2];
+	f32 m0[2];
 	f32 dist[3];
 	f32 atten[3] = { 0.9f, 0.5f, 0.05f };
 
@@ -58,16 +60,14 @@ void TSilhouette::loadAfter()
 		dist[i] = unk24[i];
 
 	for (int i = 0; i < 2; ++i) {
-		m[0][i]
-		    = atten[i + 1]
-		      * (atten[i] * (dist[i] * dist[i] - dist[i + 1] * dist[i + 1]));
-		m[1][i] = atten[i + 1] * (atten[i] * (dist[i] - dist[i + 1]));
-		m[2][i] = atten[i + 1] - atten[i];
+		m0[i] = atten[i + 1]
+		        * (atten[i] * (dist[i] * dist[i] - dist[i + 1] * dist[i + 1]));
+		m1[i] = atten[i + 1] * (atten[i] * (dist[i] - dist[i + 1]));
+		m2[i] = atten[i + 1] - atten[i];
 	}
 
-	unk38 = (m[2][0] * m[1][1] - m[2][1] * m[1][0])
-	        / (m[0][0] * m[1][1] - m[0][1] * m[1][0]);
-	unk34 = (m[2][0] - m[0][0] * unk38) / m[1][0];
+	unk38 = (m2[0] * m1[1] - m2[1] * m1[0]) / (m0[0] * m1[1] - m0[1] * m1[0]);
+	unk34 = (m2[0] - m0[0] * unk38) / m1[0];
 	unk30 = atten[0] - (dist[0] * dist[0] * unk38 + dist[0] * unk34);
 	unk3C = 8e-05f;
 
@@ -128,7 +128,7 @@ void TSilhouette::perform(u32 cue, JDrama::TGraphics* graphics)
 	}
 	if ((cue & CUE_DRAW_INIT) != 0) {
 		GXColor color = unk12;
-		color.a       = gpSunMgr->getUnk1CAlpha();
+		color.a       = gpSunMgr->unk18.a;
 		GXSetChanMatColor(GX_COLOR0A0, color);
 		setting(graphics->getViewMtx());
 	}
@@ -143,9 +143,10 @@ void TSilhouette::perform(u32 cue, JDrama::TGraphics* graphics)
 		Mtx afStack_e0;
 		PSMTXScale(afStack_e0, unk3C, unk3C, unk3C);
 		Mtx afStack_110;
-		PSMTXTrans(afStack_110, -gpMarioPos->x, 0.0f, -gpMarioPos->z);
+		PSMTXTrans(afStack_110, -SMS_GetMarioPos().x, 0.0f,
+		           -SMS_GetMarioPos().z);
 		Mtx afStack_140;
-		PSMTXTrans(afStack_140, 1.75f, 1.75f, 0.0f);
+		PSMTXTrans(afStack_140, 0.5f, 0.5f, 0.0f);
 		PSMTXConcat(afStack_e0, afStack_110, afStack_e0);
 		PSMTXConcat(afStack_50, afStack_e0, afStack_50);
 		PSMTXConcat(afStack_140, afStack_50, afStack_50);
@@ -427,8 +428,12 @@ void SMS_AddDamageFogEffect(J3DModelData* param_1,
 	f32 startBase = -700.0f;
 	f32 endBase   = 500.0f;
 	f32 s         = JMASSin((s16)(gpMarDirector->mMoveTickCount * 0x888));
-	f32 startOsc  = (-400.0f - startBase) * s;
-	f32 endOsc    = (800.0f - endBase) * s;
+	f32 startOsc  = -400.0f;
+	f32 endOsc    = 800.0f;
+	startOsc -= startBase;
+	endOsc -= endBase;
+	startOsc *= s;
+	endOsc *= s;
 
 	for (u16 i = 0; i < param_1->getMaterialNum(); i++) {
 		J3DFog* fog
@@ -503,10 +508,10 @@ Plane sViewPlane[6];
 static void SetViewFrustumClipCheck(f32 top, f32 bottom, f32 left, f32 right,
                                     f32 near, f32 far)
 {
-	f32 farTop    = top * (far / near);
-	f32 farBottom = bottom * (far / near);
 	f32 farLeft   = left * (far / near);
 	f32 farRight  = right * (far / near);
+	f32 farTop    = top * (far / near);
+	f32 farBottom = bottom * (far / near);
 
 	Vec corner[8];
 

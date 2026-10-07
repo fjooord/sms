@@ -1,4 +1,5 @@
 #include <System/MarNameRefGen.hpp>
+#include <M3DUtil/InfectiousStrings.hpp>
 #include <Enemy/EffectObj.hpp>
 #include <Enemy/EnemyManager.hpp>
 #include <Enemy/Gesso.hpp>
@@ -6,6 +7,7 @@
 #include <Enemy/Launcher.hpp>
 #include <Enemy/MameGesso.hpp>
 #include <Enemy/NameKuri.hpp>
+#include <Enemy/Pakkun.hpp>
 #include <Enemy/PoiHana.hpp>
 #include <Enemy/RiccoHook.hpp>
 #include <Enemy/Rocket.hpp>
@@ -22,10 +24,30 @@
 #include <Enemy/Kumokun.hpp>
 #include <Enemy/EggGen.hpp>
 #include <Enemy/Igaiga.hpp>
+#include <Enemy/TobiPuku.hpp>
 #include <Animal/AnimalBase.hpp>
 #include <Animal/AnimalManager.hpp>
 #include <Animal/Butterfly.hpp>
 #include <Animal/fishoid.hpp>
+#include <Enemy/EffectEnemy.hpp>
+#include <Enemy/HauntLeg.hpp>
+#include <Enemy/HanaSambo.hpp>
+#include <Enemy/Yumbo.hpp>
+#include <Enemy/Popo.hpp>
+#include <Enemy/ElecNokonoko.hpp>
+#include <Enemy/ChuuHana.hpp>
+#include <Enemy/Cannon.hpp>
+#include <Enemy/BombHei.hpp>
+#include <Enemy/AmiNoko.hpp>
+#include <Enemy/Seal.hpp>
+#include <Enemy/Kazekun.hpp>
+#include <Enemy/FruitsBoat.hpp>
+#include <Enemy/TabePuku.hpp>
+#include <Enemy/WireTrap.hpp>
+#include <Enemy/Killer.hpp>
+#include <Enemy/Kukku.hpp>
+#include <Animal/Bird.hpp>
+#include <Animal/BeeHive.hpp>
 
 JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 {
@@ -45,41 +67,41 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 	if (strcmp(name, "EnemyManager") == 0)
 		return new TEnemyManager;
 
-	// TODO:
-	// if (strcmp(name, "FruitsBoat") == 0 || strcmp(name, "FruitsBoatG") == 0
-	// ||
-	//     strcmp(name, "FruitsBoatP") == 0 || strcmp(name, "FruitsBoatY") == 0)
-	//     return new TFruitsBoat("フルーツの船");
+	if (strcmp(name, "FruitsBoat") == 0)
+		return new TFruitsBoat;
 
-	// TODO:
-	// if (strcmp(name, "FruitsBoatManager") == 0)
-	// 	return new TFruitsBoatManager(0, "フルーツの船マネージャー");
+	if (strcmp(name, "FruitsBoatB") == 0)
+		return new TFruitsBoat;
 
-	// TODO:
-	// if (strcmp(name, "FruitsBoatGManager") == 0)
-	// 	return new TFruitsBoatManager(1, "フルーツの船マネージャー");
+	if (strcmp(name, "FruitsBoatC") == 0)
+		return new TFruitsBoat;
 
-	// TODO:
-	// if (strcmp(name, "FruitsBoatPManager") == 0)
-	// 	return new TFruitsBoatManager(2, "フルーツの船マネージャー");
+	if (strcmp(name, "FruitsBoatD") == 0)
+		return new TFruitsBoat;
 
-	// TODO:
-	// if (strcmp(name, "FruitsBoatYManager") == 0)
-	//     return new TFruitsBoatManager(3, "フルーツの船マネージャー");
+	if (strcmp(name, "FruitsBoatManager") == 0)
+		return new TFruitsBoatManager(0);
+
+	if (strcmp(name, "FruitsBoatManagerB") == 0)
+		return new TFruitsBoatManager(1);
+
+	if (strcmp(name, "FruitsBoatManagerC") == 0)
+		return new TFruitsBoatManager(2);
+
+	if (strcmp(name, "FruitsBoatManagerD") == 0)
+		return new TFruitsBoatManager(3);
 
 	if (strcmp(name, "AnimalMew") == 0)
-		return new TAnimalBase(0x80001);
+		return new TAnimalBase(ACTOR_TYPE_ANIMAL_MEW, "?");
 
 	if (strcmp(name, "MewManager") == 0)
 		return new TMewManager;
 
-	// TODO:
-	// if ( strcmp(name, "AnimalBird") == 0)
-	//     return new TAnimalBird;
+	if (strcmp(name, "AnimalBird") == 0)
+		return new TAnimalBird;
 
-	// TODO:
-	// if ( strcmp(name, "AnimalBirdManager") == 0)
-	//     return new TAnimalBirdManager;
+	if (strcmp(name, "AnimalBirdManager") == 0)
+		return new TAnimalBirdManager;
 
 	if (strcmp(name, "FishoidA") == 0)
 		return new TFishoid(0, "回遊魚Ａ");
@@ -96,13 +118,11 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 	if (strcmp(name, "FishoidManager") == 0)
 		return new TFishoidManager;
 
-	// TODO:
-	// if ( strcmp( name, "BeeHive" ) == 0 )
-	//     return new TBeeHive;
+	if (strcmp(name, "BeeHive") == 0)
+		return new TBeeHive;
 
-	// TODO:
-	// if ( strcmp(name, "BeeHiveManager") == 0)
-	//     return new TBeeHiveManager;
+	if (strcmp(name, "BeeHiveManager") == 0)
+		return new TBeeHiveManager;
 
 	if (strcmp(name, "Butterfly") == 0)
 		return new TButterfloid(0, "蝶Ａ");
@@ -137,17 +157,14 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 	if (strcmp(name, "EffectExplosionManager") == 0)
 		return new TEffectExplosionManager;
 
-	// TODO:
-	// if (strcmp(name, "EffectEnemyManager") == 0)
-	// 	return new TEffectEnemyManager("エネミーマネージャー");
+	if (strcmp(name, "EffectEnemyManager") == 0)
+		return new TEffectEnemyManager;
 
-	// TODO:
-	// if ( strcmp(name, "EffectEnemy") == 0)
-	//     return new TEffectEnemy("エフェクト敵");
+	if (strcmp(name, "EffectEnemy") == 0)
+		return new TEffectEnemy;
 
-	// TODO:
-	// if ( strcmp(name, "HauntLegManager") == 0)
-	//     return new THauntLegManager;
+	if (strcmp(name, "HauntLegManager") == 0)
+		return new THauntLegManager("ハントレッグマネージャー");
 
 	if (strcmp(name, "HamuKuriManager") == 0)
 		return new THamuKuriManager;
@@ -200,53 +217,41 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 	if (strcmp(name, "DiffusionNameKuriManager") == 0)
 		return new TDiffusionNameKuriManager;
 
-	// TODO:
-	// if ( strcmp(name, "PakkunManager") == 0)
-	//     return new TPakkunManager;
+	if (strcmp(name, "PakkunManager") == 0)
+		return new TPakkunManager;
 
-	// TODO:
-	// if ( strcmp( name, "Pakkun" ) == 0 )
-	//     return new TPakkun;
+	if (strcmp(name, "Pakkun") == 0)
+		return new TPakkun;
 
-	// TODO:
-	// if ( strcmp(name, "StayPakkun") == 0)
-	//     return new TStayPakkun;
+	if (strcmp(name, "StayPakkun") == 0)
+		return new TStayPakkun;
 
-	// TODO:
-	// if ( strcmp(name, "HanaSamboManager") == 0)
-	//     return new THanaSamboManager;
+	if (strcmp(name, "HanaSamboManager") == 0)
+		return new THanaSamboManager;
 
-	// TODO:
-	// if ( strcmp(name, "HanaSambo") == 0)
-	//     return new THanaSambo;
+	if (strcmp(name, "HanaSambo") == 0)
+		return new THanaSambo;
 
-	// TODO:
-	// if ( strcmp(name, "SamboHeadManager") == 0)
-	//     return new TSamboHeadManager;
+	if (strcmp(name, "SamboHeadManager") == 0)
+		return new TSamboHeadManager;
 
-	// TODO:
-	// if ( strcmp(name, "SamboHead") == 0)
-	//     return new TSamboHead;
+	if (strcmp(name, "SamboHead") == 0)
+		return new TSamboHead;
 
-	// TODO:
-	// if ( strcmp(name, "YumboManager") == 0)
-	//     return new TYumboManager;
+	if (strcmp(name, "YumboManager") == 0)
+		return new TYumboManager("ユンボマネージャー");
 
-	// TODO:
-	// if (strcmp(name, "SamboFlowerManager") == 0)
-	// 	return new TSamboFlowerManager("サンボフラワーマネージャー");
+	if (strcmp(name, "SamboFlowerManager") == 0)
+		return new TSamboFlowerManager;
 
-	// TODO:
-	// if ( strcmp(name, "SamboFlower") == 0)
-	//     return new TSamboFlower;
+	if (strcmp(name, "SamboFlower") == 0)
+		return new TSamboFlower;
 
-	// TODO:
-	// if ( strcmp(name, "PopoManager") == 0)
-	//     return new TPopoManager;
+	if (strcmp(name, "PopoManager") == 0)
+		return new TPopoManager("ポポマネージャー");
 
-	// TODO:
-	// if ( strcmp( name, "Popo" ) == 0 )
-	//     return new TPopo;
+	if (strcmp(name, "Popo") == 0)
+		return new TPopo;
 
 	if (strcmp(name, "GorogoroManager") == 0)
 		return new TGorogoroManager;
@@ -269,13 +274,11 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 	if (strcmp(name, "MameGesso") == 0)
 		return new TMameGesso;
 
-	// TODO:
-	// if ( strcmp(name, "ElecNokonokoManager") == 0)
-	//     return new TElecNokonokoManager;
+	if (strcmp(name, "ElecNokonokoManager") == 0)
+		return new TElecNokonokoManager;
 
-	// TODO:
-	// if ( strcmp(name, "ElecNokonoko") == 0)
-	//     return new TElecNokonoko;
+	if (strcmp(name, "ElecNokonoko") == 0)
+		return new TElecNokonoko;
 
 	if (strcmp(name, "TelesaManager") == 0)
 		return new TTelesaManager;
@@ -308,14 +311,13 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 		return new TPoiHana;
 
 	if (strcmp(name, "PoiHanaRed") == 0)
-		return new TPoiHana;
+		return new TPoiHanaRed;
 
 	if (strcmp(name, "SleepPoiHana") == 0)
 		return new TSleepPoiHana;
 
-	// TODO:
-	// if ( strcmp(name, "ChuuHanaManager") == 0)
-	//     return new TChuuHanaManager;
+	if (strcmp(name, "ChuuHanaManager") == 0)
+		return new TChuuHanaManager;
 
 	if (strcmp(name, "FireWanwanManager") == 0)
 		return new TFireWanwanManager;
@@ -323,96 +325,74 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 	if (strcmp(name, "FireWanwan") == 0)
 		return new TFireWanwan;
 
-	// TODO:
-	// if ( strcmp(name, "TobiPukuLaunchPadManager") == 0)
-	//     return new TTobiPukuLaunchPadManager;
+	if (strcmp(name, "TobiPukuLaunchPadManager") == 0)
+		return new TTobiPukuLaunchPadManager("とびプク発射台マネージャー");
 
-	// TODO:
-	// if ( strcmp(name, "TobiPukuLaunchPad") == 0)
-	//     return new TTobiPukuLaunchPad;
+	if (strcmp(name, "TobiPukuLaunchPad") == 0)
+		return new TTobiPukuLaunchPad("とびプク発射台");
 
-	// TODO:
-	// if ( strcmp(name, "MoePukuLaunchPadManager") == 0)
-	//     return new TTobiPukuLaunchPadManager;
+	if (strcmp(name, "MoePukuLaunchPadManager") == 0)
+		return new TMoePukuLaunchPadManager;
 
-	// TODO:
-	// if ( strcmp(name, "MoePukuLaunchPad") == 0)
-	//     return new TTobiPukuLaunchPad;
+	if (strcmp(name, "MoePukuLaunchPad") == 0)
+		return new TMoePukuLaunchPad;
 
-	// TODO:
-	// if ( strcmp(name, "TobiPukuManager") == 0)
-	//     return new TTobiPukuManager;
+	if (strcmp(name, "TobiPukuManager") == 0)
+		return new TTobiPukuManager("とびプクマネージャー");
 
-	// TODO:
-	// if ( strcmp(name, "MoePukuManager") == 0)
-	//     return new TTobiPukuManager;
+	if (strcmp(name, "MoePukuManager") == 0)
+		return new TMoePukuManager;
 
-	// TODO:
-	// if ( strcmp(name, "PukuPuku") == 0)
-	//     return new TPukuPuku;
+	if (strcmp(name, "PukuPuku") == 0)
+		return new TPukuPuku("プクプク");
 
-	// TODO:
-	// if ( strcmp( name, "MoePuku" ) == 0 )
-	//     return new TTobiPuku;
+	if (strcmp(name, "MoePuku") == 0)
+		return new TMoePuku;
 
-	// TODO:
-	// if ( strcmp(name, "TabePukuManager") == 0)
-	//     return new TTabePukuManager;
+	if (strcmp(name, "TabePukuManager") == 0)
+		return new TTabePukuManager;
 
-	// TODO:
-	// if ( strcmp(name, "TabePuku") == 0)
-	//     return new TTabePuku;
+	if (strcmp(name, "TabePuku") == 0)
+		return new TTabePuku;
 
-	// TODO:
-	// if ( strcmp(name, "WireTrapManager") == 0)
-	//     return new TWireTrapManager;
+	if (strcmp(name, "WireTrapManager") == 0)
+		return new TWireTrapManager;
 
-	// TODO:
-	// if ( strcmp(name, "WireTrap") == 0)
-	//     return new TWireTrap;
+	if (strcmp(name, "WireTrap") == 0)
+		return new TWireTrap;
 
-	// TODO:
-	// if ( strcmp(name, "RocketManager") == 0)
-	//     return new TRocketManager;
+	if (strcmp(name, "RocketManager") == 0)
+		return new TRocketManager("ロケットマネージャー");
 
 	if (strcmp(name, "Rocket") == 0)
 		return new TRocket;
 
-	// TODO:
-	// if ( strcmp( name, "Yumbo" ) == 0 )
-	//     return new TYumbo;
+	if (strcmp(name, "Yumbo") == 0)
+		return new TYumbo("ユンボ");
 
-	// TODO:
-	// if ( strcmp(name, "CannonManager") == 0)
-	//     return new TCannonManager;
+	if (strcmp(name, "CannonManager") == 0)
+		return new TCannonManager("砲台マネージャー");
 
-	// TODO:
-	// if ( strcmp( name, "Cannon" ) == 0 )
-	//     return new TCannon;
+	if (strcmp(name, "Cannon") == 0)
+		return new TCannon;
 
-	// TODO:
-	// if ( strcmp(name, "BombHeiManager") == 0)
-	//     return new TBombHeiManager;
+	if (strcmp(name, "BombHeiManager") == 0)
+		return new TBombHeiManager;
 
-	// TODO:
-	// if ( strcmp( name, "BombHei" ) == 0 )
-	//     return new TBombHei;
+	if (strcmp(name, "BombHei") == 0)
+		return new TBombHei;
 
-	// TODO:
-	// if ( strcmp(name, "KillerManager") == 0)
-	//     return new TKillerManager;
+	if (strcmp(name, "KillerManager") == 0)
+		return new TKillerManager;
 
-	// TODO:
-	// if ( strcmp( name, "Killer" ) == 0 )
-	//     return new TKiller;
+	if (strcmp(name, "Killer") == 0)
+		return new TKiller;
 
-	// TODO:
-	// if ( strcmp(name, "AmiNokoManager") == 0)
-	//     return new TAmiNokoManager;
+	if (strcmp(name, "AmiNokoManager") == 0)
+		return new TAmiNokoManager;
 
-	// TODO:
-	// if ( strcmp( name, "AmiNoko" ) == 0 )
-	//     return new TAmiNoko;
+	if (strcmp(name, "AmiNoko") == 0)
+		return new TAmiNoko;
 
 	if (strcmp(name, "KageMarioModokiManager") == 0)
 		return new TKageMarioModokiManager;
@@ -432,27 +412,23 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 	if (strcmp(name, "GateKeeperManager") == 0)
 		return new TBiancoGateKeeperManager;
 
-	// TODO:
-	// if ( strcmp(name, "OrangeSeal") == 0)
-	//     return new TSeal;
+	if (strcmp(name, "OrangeSeal") == 0)
+		return new TSeal;
 
-	// TODO:
-	// if ( strcmp(name, "SealManager") == 0)
-	//     return new TSealManager;
+	if (strcmp(name, "SealManager") == 0)
+		return new TSealManager;
 
 	if (strcmp(name, "HamukuriLauncher") == 0)
 		return new THamuKuriLauncher;
 
-	// TODO:
-	// if (strcmp(name, "HamukuriLauncherManager") == 0)
-	// 	return new THamukuriLauncherManager("ハムクリランチャーマネージャー");
+	if (strcmp(name, "HamukuriLauncherManager") == 0)
+		return new THamuKuriLauncherManager("ハムクリランチャーマネージャー");
 
 	if (strcmp(name, "NamekuriLauncher") == 0)
 		return new TNameKuriLauncher;
 
-	// TODO:
-	// if (strcmp(name, "NamekuriLauncherManager") == 0)
-	// 	return new TNamekuriLauncherManager("ナメクリランチャーマネージャー");
+	if (strcmp(name, "NamekuriLauncherManager") == 0)
+		return new TNameKuriLauncherManager("ナメクリランチャーマネージャー");
 
 	if (strcmp(name, "IgaigaManager") == 0)
 		return new TIgaigaManager;
@@ -468,13 +444,11 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 		return gpBeamManager;
 	}
 
-	// TODO:
-	// if ( strcmp( name, "KukkuManager" ) == 0 )
-	//     return new TKukkuManager;
+	if (strcmp(name, "KukkuManager") == 0)
+		return new TKukkuManager;
 
-	// TODO:
-	// if ( strcmp( name, "Kukku" ) == 0 )
-	//     return new TKukku;
+	if (strcmp(name, "Kukku") == 0)
+		return new TKukku;
 
 	if (strcmp(name, "KumokunManager") == 0)
 		return new TKumokunManager;
@@ -488,13 +462,11 @@ JDrama::TNameRef* TMarNameRefGen::getNameRef_Enemy(const char* name) const
 	if (strcmp(name, "Amenbo") == 0)
 		return new TAmenbo;
 
-	// TODO:
-	// if (strcmp(name, "KazekunManager") == 0)
-	// 	return new TKazekunManager;
+	if (strcmp(name, "KazekunManager") == 0)
+		return new TKazekunManager;
 
-	// TODO:
-	// if (strcmp(name, "Kazekun") == 0)
-	// 	return new TKazekun;
+	if (strcmp(name, "Kazekun") == 0)
+		return new TKazekun;
 
 	if (strcmp(name, "EffectPinnaFunsui") == 0)
 		return new TEffectPinnaFunsui;

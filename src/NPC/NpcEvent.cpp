@@ -42,9 +42,9 @@ static void CheckNerve4Npc_(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num,
 	                                             ? npc->mSpine->getLatestNerve()
 	                                             : npc->mSpine->getCurrentNerve();
 
-	TSpcSlice result;
+	int result = 0;
 	if (actual == expected)
-		result.setDataInt(1);
+		result = 1;
 	interp->push(result);
 }
 
@@ -55,7 +55,7 @@ static void evGetAddressFromViewObjName(TSpcTypedInterp<TEventWatcher>* interp,
 	const char* name = interp->pop().getDataString();
 	JDrama::TViewObj* viewObj
 	    = static_cast<JDrama::TViewObj*>(JDrama::TNameRefGen::search(name));
-	interp->push((int)viewObj);
+	interp->push(TSpcSlice((int)viewObj));
 }
 
 static void evCheckCurNerve4Npc(TSpcTypedInterp<TEventWatcher>* interp,
@@ -254,19 +254,19 @@ static void evSetFruitType(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 		int r28;
 		switch (fVar4) {
 		case 0:
-			r28 = 0x40000394;
+			r28 = ACTOR_TYPE_FRUIT_BANANA;
 			break;
 
 		case 1:
-			r28 = 0x40000390;
+			r28 = ACTOR_TYPE_FRUIT_COCONUT;
 			break;
 
 		case 2:
-			r28 = 0x40000392;
+			r28 = ACTOR_TYPE_FRUIT_PINE;
 			break;
 
 		case 3:
-			r28 = 0x40000393;
+			r28 = ACTOR_TYPE_FRUIT_DURIAN;
 			break;
 		}
 		basket->unk150 = r28;
@@ -281,9 +281,9 @@ static void evFireStartDemoCamera(TSpcTypedInterp<TEventWatcher>* interp,
 {
 	interp->verifyArgNum(1, &arg_num);
 	const char* cameraName = interp->pop().getDataString();
-	gpMarDirector->fireStartDemoCamera(cameraName, nullptr, -1, 0.0f, true,
-	                                   nullptr, 0, nullptr,
-	                                   JDrama::TFlagT<u16>());
+	SMSGetMarDirector()->fireStartDemoCamera(cameraName, nullptr, -1, 0.0f,
+	                                         true, nullptr, 0, nullptr,
+	                                         JDrama::TFlagT<u16>());
 	interp->push();
 }
 
@@ -291,7 +291,7 @@ static void evIsDemoMode(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 {
 	interp->verifyArgNum(0, &arg_num);
 	int result = 0;
-	if (gpMarDirector->isDemoModeNow())
+	if (gpMarDirector->isDemoModeNow() != 0)
 		result = 1;
 	interp->push(result);
 }
@@ -342,13 +342,13 @@ void TNpcEvent::initNpcBuiltin(TSpcTypedBinary<TEventWatcher>* param_1)
 
 void TNpcEvent::initDownSunflowerNum()
 {
-	if (TFlagManager::getInstance()->getBool(0x50003))
+	if (TFlagManager::getInstance()->getBool(MSF_SUNFLOWERS_LEFT_TO_RESCUE))
 		mDownSunflowerNum = 5;
 	else
 		mDownSunflowerNum = 0;
 }
 
-static s32 ReviveSunflowerCallBack(u32 param_1, u32 param_2)
+static s32 ReviveSunflowerCallBack(uintptr_t param_1, u32 param_2)
 {
 	if (param_2 == 0) {
 		TBaseNPC* sunflower = (TBaseNPC*)param_1;
@@ -376,6 +376,7 @@ void TNpcEvent::reviveOneSunflower()
 
 		TBaseNPC* npc
 		    = static_cast<TBaseNPC*>(JDrama::TNameRefGen::search(acStack_50));
+		const JGeometry::TVec3<f32>& position = npc->unk1B8;
 		--mDownSunflowerNum;
 
 		static const char* sCameraNames[] = {
@@ -383,15 +384,17 @@ void TNpcEvent::reviveOneSunflower()
 			"ひまわりカメラ3", "ひまわりカメラ4",
 		};
 
-		gpMarDirector->fireStartDemoCamera(sCameraNames[idx], &npc->unk1B8, -1,
-		                                   0.0f, true, &ReviveSunflowerCallBack,
-		                                   (u32)npc, nullptr, 0);
+		SMSGetMarDirector()->fireStartDemoCamera(
+		    sCameraNames[idx], &position, -1, 0.0f, true,
+		    &ReviveSunflowerCallBack, (uintptr_t)npc, nullptr,
+		    JDrama::TFlagT<u16>());
 
 		if (mDownSunflowerNum == 0) {
 			gpItemManager->makeShineAppearWithDemo(
-			    "ひまわり用シャイン", "ひまわりシャインカメラ", npc->unk1B8.x,
-			    npc->unk1B8.y + 500.0f, npc->unk1B8.z);
-			TFlagManager::getInstance()->setBool(false, 0x50003);
+			    "ひまわり用シャイン", "ひまわりシャインカメラ", position.x,
+			    position.y + 500.0f, position.z);
+			TFlagManager::getInstance()->setBool(false,
+			                                     MSF_SUNFLOWERS_LEFT_TO_RESCUE);
 		}
 	}
 }

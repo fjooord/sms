@@ -14,6 +14,8 @@
 #include <MSound/MSSetSound.hpp>
 #include <MSound/MSoundBGM.hpp>
 
+bool SMS_isMultiPlayerMap();
+
 // TODO: stuff from other rogue includes
 bool SMS_isMultiPlayerMap();
 
@@ -139,7 +141,7 @@ TMario::TMario()
 	unk108               = nullptr;
 	mFlag                = 0;
 	mPrevFlag            = 0;
-	mHealth              = mDeParams.mHpMax.get();
+	mHealth              = mDeParams.mHPMax.get();
 	unk122               = 0;
 	unk124               = 0;
 	mHotTimer            = 0;
@@ -218,8 +220,8 @@ TMario::TMario()
 	mHandModels[1][0] = nullptr;
 	mHandModels[1][1] = nullptr;
 
-	mJointIdChnChest = 0;
 	mJointIdChest    = 0;
+	mJointIdChnChest = 0;
 	mJointIdArmR1    = 0;
 	mJointIdArmL1    = 0;
 	mJointIdHandR    = 0;
@@ -365,7 +367,7 @@ void TMario::loadAfter()
 
 void TMario::initValues()
 {
-	mHealth     = mDeParams.mHpMax.get();
+	mHealth     = mDeParams.mHPMax.get();
 	mDirty      = 0.0f;
 	mOilBrake   = 1.0f;
 	mDirtyTimer = 0;
@@ -424,9 +426,12 @@ void TMario::initValues()
 	unk530 = new s16[60];
 	resetHistory();
 
-	initHitActor(0x80000001, 5, 0xFC000000, mDeParams.mTrampleRadius.get(),
-	             mDeParams.mAttackHeight.get(), mDeParams.mDamageRadius.get(),
-	             mDeParams.mDamageHeight.get());
+	initHitActor(ACTOR_TYPE_MARIO, 5,
+	             HIT_CATEGORY_PLAYER | HIT_CATEGORY_MAP_OBJECT
+	                 | HIT_CATEGORY_ITEM | HIT_CATEGORY_ENEMY
+	                 | HIT_CATEGORY_BOSS | HIT_CATEGORY_NPC,
+	             mDeParams.mTrampleRadius.get(), mDeParams.mAttackHeight.get(),
+	             mDeParams.mDamageRadius.get(), mDeParams.mDamageHeight.get());
 
 	unk390 = new TMBindShadowBody(this, mModel->getModel(), 1.0f);
 
@@ -456,11 +461,13 @@ void TMario::resetHistory()
 	unk53B = 0;
 }
 
+void TMario::stageSetting() { }
+
 void TMario::setGamePad(TMarioGamePad* pad) { mGamePad = pad; }
 
 TMario::TDeParams::TDeParams()
     : TParams("/Mario/Mario.prm")
-    , mHpMax(this, 8, JDrama::TNameRef::calcKeyCode("mHPMax"), "mHPMax")
+    , PARAM_INIT(mHPMax, 8)
     , PARAM_INIT(mRunningMax, 45.0f)
     , PARAM_INIT(mDashMax, 60.0f)
     , PARAM_INIT(mDashAcc, 0.5f)
@@ -932,7 +939,7 @@ TMario::TDivingParams::TDivingParams(const char* prm)
 TMario::TEParams::TEParams(const char* prm)
     : TParams(prm)
     , PARAM_INIT(mDamage, 1)
-    , PARAM_INIT(mDownType, 0)
+    , PARAM_INIT(mDownType, 1)
     , PARAM_INIT(mWaterEmit, 0)
     , PARAM_INIT(mMotor, 25)
     , PARAM_INIT(mMinSpeed, 16.0f)

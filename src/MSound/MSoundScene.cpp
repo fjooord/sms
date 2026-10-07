@@ -19,7 +19,6 @@ MSSceneSE::MSSceneSE(u32 param_1)
 
 void MSSceneSE::frameLoop(u32 sound_id, Vec* trans, u8 trans_num)
 {
-	u32 id;
 	if (MSGMSound->gateCheck(sound_id) && trans_num <= ARRAY_COUNT(mTrans)) {
 		Vec* ptr = trans;
 		for (u8 i = 0; i < trans_num; ++i) {
@@ -83,11 +82,8 @@ void MSSceneSE::frameLoop(u32 sound_id, Vec* trans, u8 trans_num)
 		for (u8 i = 0; i < DIRECTION_NUM; ++i) {
 			if (mMaxTrans[i][0] != nullptr) {
 				if (!mUseRandPlay) {
-					id = sound_id + i;
-					if (MSGMSound->gateCheck(id)) {
-						MSoundSESystem::MSoundSE::startSoundActor(
-						    id, &mAvgTrans[i], 0, nullptr, 0, 4);
-					}
+					MSGMSound->startSoundActor(sound_id + i, &mAvgTrans[i], 0,
+					                           nullptr, 0, 4);
 				} else {
 					MSoundSESystem::MSRandPlay::startSeRandPlay(sound_id, i);
 				}

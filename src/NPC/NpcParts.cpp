@@ -26,22 +26,22 @@ const char* cNpcPartsNameRootJoint = "__ROOT_JOINT__";
 const char* cPeachPartsTextureName = "H_peach_main_dummy";
 const char* cPeachHostTextureName  = "H_peach_main_s3tc";
 
-void SetMActorAnmFrame(MActor* param_1, f32 param_2, bool param_3, bool param_4)
+void SetMActorAnmFrame(MActor* actor, f32 frame, bool bck, bool btp)
 {
-	if (param_1 == nullptr)
+	if (actor == nullptr)
 		return;
 
 	J3DFrameCtrl* ctrl;
-	if (param_3) {
-		ctrl = param_1->getFrameCtrl(ANM_TYPE_BCK);
+	if (bck) {
+		ctrl = actor->getFrameCtrl(ANM_TYPE_BCK);
 		if (ctrl != nullptr)
-			ctrl->setFrame(param_2);
+			ctrl->setFrame(frame);
 	}
 
-	if (param_4) {
-		ctrl = param_1->getFrameCtrl(ANM_TYPE_BTP);
+	if (btp) {
+		ctrl = actor->getFrameCtrl(ANM_TYPE_BTP);
 		if (ctrl != nullptr)
-			ctrl->setFrame(param_2);
+			ctrl->setFrame(frame);
 	}
 }
 
@@ -50,48 +50,48 @@ TNpcParts::TNpcParts(u32 param_1, const J3DGXColorS10* param_2,
     : unk60(param_3)
 {
 	const TNpcInitInfo* initInfo
-	    = SMSGetNpcInitData(unk60->getActorType() - 0x4000001);
+	    = SMSGetNpcInitData(unk60->getActorType() - ACTOR_TYPE_NPC_MONTE_M);
 
 	TSharedParts** parts = &unk0[0][0];
 	for (int i = 0; i < 24; ++i, ++parts)
 		*parts = nullptr;
 
 	for (int i = 0; i < 12; ++i) {
-		const TNpcModelData* iVar10 = initInfo->unk4[i];
-		if (iVar10 == nullptr || !(param_1 & (1 << i)))
+		if (initInfo->unk4[i] == nullptr || !(param_1 & (1 << i)))
 			continue;
 
-		u32 param3 = (&param_2->color.r)[iVar10->unk28];
+		u32 param3 = (&param_2->color.r)[initInfo->unk4[i]->unk28];
 
 		const GXColor* param4 = nullptr;
-		if (iVar10->unk2A)
+		if (initInfo->unk4[i]->unk2A)
 			param4 = unk60->getPtrInitPollutionColor();
 
 		for (int j = 0; j < 2; ++j) {
 			if (j >= unk60->getManager()->unk28)
 				break;
 
-			const char* puVar3 = initInfo->unk4[i][j].unk8[0];
+			const char* puVar3 = initInfo->unk4[i]->unk8[j];
 			if (puVar3 == nullptr)
 				continue;
 
 			int iVar6
-			    = strcmp(initInfo->unk4[i][j].unk0, cNpcPartsNameRootJoint) == 0
+			    = strcmp(initInfo->unk4[i]->unk0[j], cNpcPartsNameRootJoint)
+			              == 0
 			          ? -1
 			          : unk60->mMActorKeeper->getMActor(j)
 			                ->getModel()
 			                ->getModelData()
 			                ->getJointName()
-			                ->getIndex(initInfo->unk4[i][j].unk0);
+			                ->getIndex(initInfo->unk4[i]->unk0[j]);
 
 			TNPCManager* manager    = (TNPCManager*)unk60->getManager();
 			SDLModelData* modelData = manager->getPartsSDLModelData(puVar3);
 			unk0[j][i] = new TSharedParts(unk60, iVar6, modelData, 3);
-			if (initInfo->unk4[i][j].unk2B)
+			if (initInfo->unk4[i]->unk2B)
 				SMS_UnifyMaterial(unk0[j][i]->getMActor()->getModel());
 
 			switch (unk60->getActorType()) {
-			case 0x4000018:
+			case ACTOR_TYPE_NPC_PEACH:
 				if (j != 0 || (i != 3 && i != 4)) {
 					TSharedParts* parts = unk0[j][i];
 
@@ -116,31 +116,32 @@ TNpcParts::TNpcParts(u32 param_1, const J3DGXColorS10* param_2,
 						if (iVar6 == -1)
 							iVar6 = TBaseNPC::mPtrSaveNormal->mMotionBlendFrame
 							            .get();
-						unk0[j][i]->getMActor()->initSimpleMotionBlend(iVar6);
+						unk0[j][i]->getMActor()->initBckSimpleMotionBlend(
+						    iVar6);
 						break;
 					}
 				}
 				break;
 
-			case 0x4000010:
+			case ACTOR_TYPE_NPC_MARE_MB:
 				if (j == 0 && i == 9)
-					unk0[j][i]->getMActor()->initSimpleMotionBlend(20);
+					unk0[j][i]->getMActor()->initBckSimpleMotionBlend(20);
 				break;
 
-			case 0x4000015:
+			case ACTOR_TYPE_NPC_MARE_WB:
 				if (j == 0 && i == 10) {
 					int iVar6 = -1;
 					if (iVar6 == -1)
 						iVar6
 						    = TBaseNPC::mPtrSaveNormal->mMotionBlendFrame.get();
-					unk0[j][i]->getMActor()->initSimpleMotionBlend(iVar6);
+					unk0[j][i]->getMActor()->initBckSimpleMotionBlend(iVar6);
 				}
 				break;
 			}
 
 			for (int k = 0; k < 3; ++k) {
 				const TColorChangeInfo* ccInfo
-				    = initInfo->unk4[i][j].unk10[k].unk0;
+				    = initInfo->unk4[i]->unk10[k].unk0[j];
 				if (ccInfo != nullptr)
 					SMS_InitChangeNpcColor(unk0[j][i]->getMActor(), ccInfo,
 					                       param3, param4);
@@ -192,15 +193,13 @@ void TNpcParts::addJellyFishParts(f32 param_1)
 void TNpcParts::setPartsAnmFrame(f32 param_1)
 {
 	switch (unk60->getActorType()) {
-	case 0x4000010:
+	case ACTOR_TYPE_NPC_MARE_MB:
 		SetMActorAnmFrame(getPartsMActor(9, 0), param_1, true, false);
 		break;
-
-	case 0x4000015:
+	case ACTOR_TYPE_NPC_MARE_WB:
 		SetMActorAnmFrame(getPartsMActor(10, 0), param_1, true, true);
 		break;
-
-	case 0x4000018:
+	case ACTOR_TYPE_NPC_PEACH:
 		SetMActorAnmFrame(getPartsMActor(0, 0), param_1, true, false);
 		SetMActorAnmFrame(getPartsMActor(3, 0), param_1, true, false);
 		SetMActorAnmFrame(getPartsMActor(4, 0), param_1, true, false);
@@ -220,7 +219,7 @@ void TNpcParts::partsFrameUpdate()
 {
 	int i = 0;
 
-	TSharedParts** it = unk0[unk60->getLodAnm()->unk8];
+	TSharedParts** it = unk0[unk60->getLodAnm()->getCurrentLod()];
 
 	for (; i < 12; i++, ++it)
 		if (*it)
@@ -231,13 +230,13 @@ void TNpcParts::partsPerform(u32 param_1, JDrama::TGraphics* param_2)
 {
 	int i = 0;
 
-	TSharedParts** it = unk0[unk60->getLodAnm()->unk8];
+	TSharedParts** it = unk0[unk60->getLodAnm()->getCurrentLod()];
 
 	for (; i < 12; ++i, ++it) {
 		if (*it == nullptr)
 			continue;
 
-		if (unk60->getActorType() == 0x4000018) {
+		if (unk60->getActorType() == ACTOR_TYPE_NPC_PEACH) {
 			// Peach stuff
 			bool r4 = true;
 			if (unk60->checkUnk1D8(TBaseNPC::UNK1D8_FLAG_UNK4)) {
@@ -272,7 +271,7 @@ void TNpcParts::partsPerform(u32 param_1, JDrama::TGraphics* param_2)
 		if (param_1 & 2) {
 			if (unk60->isJellyFishMare() && i == 11) {
 				MActor* mactor = (*it)->getMActor();
-				Mtx mtx;
+				Mtx44 mtx;
 				SMS_GetLightPerspectiveForEffectMtx(mtx);
 				J3DModelData* data = mactor->getModel()->getModelData();
 				int starglowMatIdx

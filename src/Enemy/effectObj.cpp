@@ -91,7 +91,8 @@ void TEffectObjBase::load(JSUMemoryInputStream& stream)
 
 void TEffectObjBase::init()
 {
-	initHitActor(0x10000005, 5, -0x80000000, 30.0f, 150.0f, 30.0f, 150.0f);
+	initHitActor(ACTOR_TYPE_EFFECT_ENEMY, 5, HIT_CATEGORY_PLAYER, 30.0f, 150.0f,
+	             30.0f, 150.0f);
 	reset();
 }
 
@@ -100,7 +101,7 @@ void TEffectObjBase::reset()
 	unk68 = 1;
 	unk6C = 200.0f;
 	unk70 = 200.0f;
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	unk74 = 0;
 }
 
@@ -156,8 +157,8 @@ void TEffectObjBase::moveObject()
 		unk68 = 0;
 
 	for (int i = 0; i < mColCount; ++i)
-		if (getCollision(i)->isActorType(0x80000001))
-			SMS_SendMessageToMario(this, 0xA);
+		if (getCollision(i)->isActorType(ACTOR_TYPE_MARIO))
+			SMS_SendMessageToMario(this, HIT_MESSAGE_BURN);
 }
 
 void TEffectObjBase::behaveToWater(THitActor* param_1)
@@ -173,7 +174,7 @@ void TEffectObjBase::behaveToWater(THitActor* param_1)
 	SMSGetMSound()->startSoundActor(MSD_SE_BS_WANWAN_TO_COOL, &mPosition, 0,
 	                                nullptr, 0, 4);
 	unk68 = 3;
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 
 	if (JPABaseEmitter* emitter = gpMarioParticleManager->emitAndBindToPosPtr(
 	        PARTICLE_MS_MOE_FIRE_OFF, &mPosition, 0, nullptr)) {
@@ -227,8 +228,8 @@ void TEffectModel::init(TLiveManager* param_1)
 
 	onLiveFlag(LIVE_FLAG_DEAD);
 	mScaling.set(0.0f, 0.0f, 0.0f);
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	mActorType = 0x10000020;
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	mActorType = ACTOR_TYPE_EFFECT_OBJ;
 	mRotation.zero();
 }
 
@@ -240,7 +241,7 @@ void TEffectModel::reset()
 	onLiveFlag(LIVE_FLAG_UNK10);
 	offLiveFlag(LIVE_FLAG_DEAD);
 	offLiveFlag(LIVE_FLAG_CLIPPED_OUT);
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TEffectModel::moveObject()
@@ -302,12 +303,12 @@ void TEffectColumWater::init(TLiveManager* param_1)
 	TEffectModel::init(param_1);
 	onLiveFlag(LIVE_FLAG_DEAD);
 	mScaling.set(0.0f, 0.0f, 0.0f);
-	mActorType = 0x10000020;
+	mActorType = ACTOR_TYPE_EFFECT_OBJ;
 	mMActor->setBck("06_enem_tobikomi");
 	mMActor->setBrk("06_enem_tobikomi");
 	mMActor->setBtk("06_enem_tobikomi");
 	mMActor->setBpk("06_enem_tobikomi");
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TEffectColumWater::reset()
@@ -339,7 +340,7 @@ void TEffectColumWater::generate(JGeometry::TVec3<f32>& param_1,
 		emitter->setGlobalScale(mScaling);
 	}
 
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 TEffectBombColumWaterManager::TEffectBombColumWaterManager(const char* name)
@@ -383,12 +384,12 @@ void TEffectBombColumWater::init(TLiveManager* param_1)
 	TEffectModel::init(param_1);
 	onLiveFlag(LIVE_FLAG_DEAD);
 	mScaling.set(0.0f, 0.0f, 0.0f);
-	mActorType = 0x10000020;
+	mActorType = ACTOR_TYPE_EFFECT_OBJ;
 	mMActor->setBck("04_tobikomi");
 	mMActor->setBrk("04_tobikomi");
 	mMActor->setBtk("04_tobikomi");
 	mMActor->setBpk("04_tobikomi");
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TEffectBombColumWater::reset()
@@ -425,7 +426,7 @@ void TEffectBombColumWater::generate(JGeometry::TVec3<f32>& param_1,
 		emitter->setGlobalScale(mScaling);
 	}
 
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 TEffectColumSandManager::TEffectColumSandManager(const char* name)
@@ -468,11 +469,11 @@ void TEffectColumSand::init(TLiveManager* param_1)
 	TEffectModel::init(param_1);
 	onLiveFlag(LIVE_FLAG_DEAD);
 	mScaling.set(0.0f, 0.0f, 0.0f);
-	mActorType = 0x10000020;
+	mActorType = ACTOR_TYPE_EFFECT_OBJ;
 	mMActor->setBck("08_sunabashira");
 	mMActor->setBrk("08_sunabashira");
 	mMActor->setBtk("08_sunabashira");
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TEffectColumSand::reset()
@@ -498,7 +499,7 @@ void TEffectColumSand::generate(JGeometry::TVec3<f32>& param_1,
 		emitter->setGlobalScale(JGeometry::TVec3<f32>(fVar1, fVar1, fVar1));
 	}
 
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 TEffectExplosionManager::TEffectExplosionManager(const char* name)
@@ -543,11 +544,11 @@ void TEffectExplosion::init(TLiveManager* param_1)
 	TEffectModel::init(param_1);
 	onLiveFlag(LIVE_FLAG_DEAD);
 	mScaling.set(0.0f, 0.0f, 0.0f);
-	mActorType = 0x10000020;
+	mActorType = ACTOR_TYPE_EFFECT_OBJ;
 	mMActor->setBck("10_bomb");
 	mMActor->setBrk("10_bomb");
 	mMActor->setBtk("10_bomb");
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TEffectExplosion::reset()
@@ -589,5 +590,5 @@ void TEffectExplosion::generate(JGeometry::TVec3<f32>& param_1,
 		emitter->setGlobalScale(scale);
 	}
 
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 }

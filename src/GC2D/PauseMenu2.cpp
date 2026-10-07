@@ -27,6 +27,7 @@
 #include <System/MarioGamePad.hpp>
 #include <System/StageUtil.hpp>
 #include <stdio.h>
+#include <version.h>
 
 extern JPAEmitterManager* gpEmitterManager4D2;
 
@@ -76,7 +77,7 @@ void TPauseMenu2::load(JSUMemoryInputStream& pStream)
 	mScreen          = new J2DSetScreen("pause_1.blo", arch);
 	mScreen->setCullBack(GX_CULL_BACK);
 
-	if (gpApplication.mCurrArea.unk0 <= 1) {
+	if (SMSGetApplication()->mCurrArea.getStage() <= 1) {
 		// Hide "Exit Area" option in Delfino Plaza.
 		mNumItems = 2;
 	}
@@ -85,17 +86,21 @@ void TPauseMenu2::load(JSUMemoryInputStream& pStream)
 	mMenuPane   = mScreen->search('t_0');
 
 	for (s32 i = 0; i < 5; i++) {
-		mPauseLetters[i] = (J2DPicture*)mScreen->search('t_0' + i);
+		mPauseLetters[i] = (J2DPicture*)mScreen->search('pa00' + i);
 	}
 
 	for (s32 i = 0; i < 3; i++) {
 		mMenuItems[i] = (J2DPicture*)mScreen->search('tx_1' + i);
 
 		if (mNumItems == 2) {
-			mMenuItems[i]->add(0, 14);
+			mMenuItems[i]->add(0, VERSION_SELECT(GMSJ01(14), GMSP01(20)));
 		}
 		mMenuItems[i]->mVisible = false;
 	}
+
+#ifdef VERSION_GMSP01
+	unk20 = mScreen->search('brek');
+#endif
 
 	mStageName = (J2DTextBox*)mScreen->search('map');
 	mStageName->setFont(gpSystemFont);
@@ -107,14 +112,22 @@ void TPauseMenu2::load(JSUMemoryInputStream& pStream)
 	mStagePane = mScreen->search('brek');
 
 	u32 shineStage = SMS_getShineStage(gpMarDirector->mMap);
-	s32 flag       = TFlagManager::getInstance()->getFlag(0x40003);
+	s32 flag       = TFlagManager::getInstance()->getFlag(MSF_EPISODE);
 
+#ifdef VERSION_GMSP01
+	void* stageBmg = JKRFileLoader::getGlbResource("/cmn2d/stagename.bmg");
+	if (gpMarDirector->mMap == 0x14)
+		shineStage = 0;
+	mStageName->setString(SMSGetMessageData(stageBmg, shineStage));
+#else
 	mStageName->setString(SMSGetMessageData(
 	    JKRFileLoader::getGlbResource("/common/2d/stagename.bmg"), shineStage));
+#endif
 
 	if (gpMarDirector->mMap != 0xF) {
-		void* scenarioBmg
-		    = JKRFileLoader::getGlbResource("/common/2d/scenarioname.bmg");
+		void* scenarioBmg = JKRFileLoader::getGlbResource(
+		    VERSION_SELECT(GMSJ01("/common/2d/scenarioname.bmg"),
+		                   GMSP01("/cmn2d/scenarioname.bmg")));
 		s16 shineID = SMS_getShineID(shineStage, flag, false);
 		const char* scenarioName;
 		if (scenarioBmg == nullptr || shineID == -1 || shineStage == 0) {
@@ -241,8 +254,8 @@ void TPauseMenu2::disappearWindow()
 	if (mFadeAnim <= 10.0f) {
 
 		// Fade out menu, background, and shine/stage panel.
-		s32 alpha
-		    = (mMenuPane->getAlpha() - 12) < 0 ? 0 : mMenuPane->getAlpha() - 12;
+		bool isFadedOut = (mMenuPane->getAlpha() - 12) < 0;
+		s32 alpha       = isFadedOut ? 0 : mMenuPane->getAlpha() - 12;
 
 		mMenuPane->setAlpha(alpha);
 
@@ -258,8 +271,8 @@ void TPauseMenu2::disappearWindow()
 		for (s32 i = 0; i < 5; i++) {
 			JUTRect rect = mPauseLetters[i]->getBounds();
 
-			rect.add(0.25f * -rect.y1 + 0.01f * rect.getWidth(),
-			         0.25f * -rect.x1 + 0.01f * rect.getHeight());
+			rect.add(0.025f * -rect.y1 + 0.01f * rect.getWidth(),
+			         0.025f * -rect.x1 + 0.01f * rect.getHeight());
 
 			rect.resize(0.98f * rect.getWidth(), 0.98f * rect.getHeight());
 
@@ -269,8 +282,8 @@ void TPauseMenu2::disappearWindow()
 		// ... and now shrink the menu items in the same manner.
 		for (s32 i = 0; i < mNumItems; i++) {
 			JUTRect rect = mMenuItems[i]->getBounds();
-			rect.add(0.25f * -rect.y1 + 0.01f * rect.getWidth(),
-			         0.25f * -rect.x1 + 0.01f * rect.getHeight());
+			rect.add(0.025f * -rect.y1 + 0.01f * rect.getWidth(),
+			         0.025f * -rect.x1 + 0.01f * rect.getHeight());
 			rect.resize(0.98f * rect.getWidth(), 0.98f * rect.getHeight());
 			mMenuItems[i]->setBounds(rect);
 		}

@@ -37,8 +37,8 @@ void TMario::incHP(int hp)
 	}
 
 	mHealth += hp;
-	if (mHealth > mDeParams.mHpMax.get()) {
-		mHealth = mDeParams.mHpMax.get();
+	if (mHealth > mDeParams.mHPMax.get()) {
+		mHealth = mDeParams.mHPMax.get();
 	} else {
 		SMSGetMSound()->startSoundSystemSE(MSD_SE_SY_HP_RECOVER, 0, nullptr, 0);
 	}
@@ -166,7 +166,7 @@ BOOL TMario::trampleExec(THitActor* param_1)
 
 	rumbleStart(0x15, mMotorParams.mMotorTrample.get());
 
-	if (param_1->checkActorType(ACTOR_TYPE_UNK4000000)) {
+	if (param_1->isHitCategory(HIT_CATEGORY_NPC)) {
 		JGeometry::TVec3<f32> scale(0.5f);
 		SMS_EasyEmitParticle(PARTICLE_MS_FUMI_B, &mPosition, this, scale);
 		SMS_EasyEmitParticle(PARTICLE_MS_FUMI_C, &mPosition, this, scale);
@@ -179,8 +179,8 @@ BOOL TMario::trampleExec(THitActor* param_1)
 	unk78 &= ~0x100;
 	mModel->getFrameCtrl(0).setAttribute(0);
 
-	if (!param_1->isActorType(0x20000008)
-	    && !param_1->isActorType(0x2000000a)) {
+	if (!param_1->isActorType(ACTOR_TYPE_ITEM_UNK8)
+	    && !param_1->isActorType(ACTOR_TYPE_ITEM_UNKA)) {
 		SMSGetMSound()->startSoundActorWithInfo(
 		    MSD_SE_MA_KICK_ENEMY, &mPosition, nullptr, 0.0f, getTrampleCt(), 0,
 		    nullptr, 0, 4);
@@ -358,7 +358,8 @@ void TMario::damageExec(THitActor* hittingActor, int damage, int damageAnimType,
 			// I don't think this is correct, but was the closest i could get
 			u32 statusIdx = animationTypes[animOffset2 * 8 + animOffset1 * 4
 			                               + damageAnimType];
-			if (mHolder == nullptr || mHolder->isActorType(0x40000098)) {
+			if (mHolder != nullptr
+			    && mHolder->isActorType(ACTOR_TYPE_MAP_WIRE_ACTOR)) {
 				// Knocked from a wire hang by damage?
 				changePlayerDropping(MARIO_STATUS_WIRE_HANG_LAND_SAFE_DOWN, 0);
 			} else {
@@ -439,7 +440,7 @@ void TMario::considerTake()
 
 	if (mHeldObject != nullptr && !check) {
 		mHeldObject->receiveMessage(this, HIT_MESSAGE_THROWN);
-		mHeldObject->receiveMessage(this, HIT_MESSAGE_UNK8);
+		mHeldObject->receiveMessage(this, HIT_MESSAGE_DETACH);
 		mHeldObject = nullptr;
 	}
 
@@ -454,7 +455,7 @@ void TMario::considerTake()
 		}
 
 		if (!check2) {
-			mHolder->receiveMessage(this, HIT_MESSAGE_UNK8);
+			mHolder->receiveMessage(this, HIT_MESSAGE_DETACH);
 			mHolder->receiveMessage(this, HIT_MESSAGE_THROWN);
 			mHolder = nullptr;
 		}

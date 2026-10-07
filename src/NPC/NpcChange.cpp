@@ -224,7 +224,7 @@ void TBaseNPC::releaseTaken_()
 
 	unk1DC = CLBPalFrame(15l);
 	unk158 = nullptr;
-	if (mActorType == 0x4000018) {
+	if (mActorType == ACTOR_TYPE_NPC_PEACH) {
 		peachTiredIn_();
 		mBalloonCtrl->setNextMessage(0, -1);
 	}
@@ -240,9 +240,9 @@ void TBaseNPC::behaveToBeTaken_(THitActor* param_1)
 	mAngleYDiffWhenTaken = sVar3 - sVar2;
 
 	mInbetweenCtrl->startPosBlend();
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	offLiveFlag(LIVE_FLAG_UNK10 | LIVE_FLAG_UNK20000 | LIVE_FLAG_UNK400000);
-	if (mActorType == 0x4000018) {
+	if (mActorType == ACTOR_TYPE_NPC_PEACH) {
 		peachParasolOut_();
 		mBalloonCtrl->setNextMessage(0xE004F, 0x2EE);
 	}
@@ -272,8 +272,8 @@ void TBaseNPC::behaveToBeTrampled_()
 			uVar10 = MSD_SE_NPC_VAS_CMAREM_PRESS;
 		} else {
 			switch (mActorType) {
-			case 0x4000010:
-			case 0x4000011:
+			case ACTOR_TYPE_NPC_MARE_MB:
+			case ACTOR_TYPE_NPC_MARE_MC:
 				uVar10 = MSD_SE_NPC_VAS_MAREJ_PRESS;
 				break;
 
@@ -290,11 +290,11 @@ void TBaseNPC::behaveToBeTrampled_()
 		}
 	} else {
 		switch (mActorType) {
-		case 0x4000016:
+		case ACTOR_TYPE_NPC_KINOPIO:
 			uVar10 = MSD_SE_NPC_VAS_KINOPI_PRESS;
 			break;
 
-		case 0x4000017:
+		case ACTOR_TYPE_NPC_KINOJII:
 			uVar10 = MSD_SE_NPC_VAS_KINOJI_PRESS;
 			break;
 		}
@@ -314,7 +314,7 @@ void TBaseNPC::behaveToBeTrampled_()
 	if (checkActionFlag(NPC_ACTION_BURNING | NPC_ACTION_HAPPY))
 		return;
 
-	switch (unkD0->getCurrentAnmKind()) {
+	switch (mLodAnm->getCurrentAnmKind()) {
 	case NPC_ANM_KIND_UNK1B:
 	case NPC_ANM_KIND_UNK7: {
 		const TNerveBase<TLiveActor>* current = mSpine->getCurrentNerve();
@@ -382,9 +382,9 @@ void TBaseNPC::behaveToHitObject_(THitActor* param_1,
 		if (!isPeachTired()) {
 			if (!isSunflowerReviving()
 			    && (isClean() || param_2 != HIT_NPC_OBJECT_KIND_UNK1)
-			    && (mActorType != 0x4000006
-			        || unkD0->getCurrentAnmKind() == NPC_ANM_KIND_UNK4
-			        || unkD0->getCurrentAnmKind() == NPC_ANM_KIND_UNK6)
+			    && (mActorType != ACTOR_TYPE_NPC_MONTE_ME
+			        || mLodAnm->getCurrentAnmKind() == NPC_ANM_KIND_UNK4
+			        || mLodAnm->getCurrentAnmKind() == NPC_ANM_KIND_UNK6)
 			    && (mSpine->getCurrentNerve() != &TNerveNPCTalk::theNerve()
 			        || mSpine->getTime() >= 4)) {
 				if (param_2 == 1)
@@ -428,12 +428,12 @@ bool TBaseNPC::isStateGoToMad_() const
 bool TBaseNPC::isNowCanTaken() const
 {
 	bool result = false;
-	if (checkLiveFlag(LIVE_FLAG_UNK100000) && mActorType != 0x400001C
+	if (checkLiveFlag(LIVE_FLAG_UNK100000) && mActorType != ACTOR_TYPE_NPC_DUMMY
 	    && mHolder == nullptr && mHeldObject == nullptr
 	    && !checkLiveFlag(LIVE_FLAG_DEAD | LIVE_FLAG_HIDDEN
 	                      | LIVE_FLAG_CLIPPED_OUT | LIVE_FLAG_UNK40000
 	                      | LIVE_FLAG_SINK_BOTTOM)
-	    && !checkHitFlag(HIT_FLAG_NO_COLLISION) && isNerveCanGoToTaken()) {
+	    && !checkHitFilter(HIT_FILTER_NO_COLLISION) && isNerveCanGoToTaken()) {
 		result = true;
 	}
 	return result;
@@ -459,52 +459,57 @@ void TBaseNPC::changeNerveProc_()
 		               | LIVE_FLAG_SINK_BOTTOM | LIVE_FLAG_UNK400000)
 		           && !checkActionFlag(NPC_ACTION_BURNING) && isClean()) {
 
-			if (isNerveCanGoToTalk()
-			    && (mActorType != 0x4000006
-			        || unkD0->getCurrentAnmKind() == NPC_ANM_KIND_UNK4)
+			if (!isSunflowerReviving() && isNerveCanGoToTalk()
+			    && (mActorType != ACTOR_TYPE_NPC_MONTE_ME
+			        || mLodAnm->getCurrentAnmKind() == NPC_ANM_KIND_UNK4)
 			    && !SMS_IsMarioOpeningDoor()) {
+				bool inCameraCube = true;
 				if (gpMarDirector->mMap == 7) {
 					JGeometry::TVec3<f32> local_58 = mPosition;
 					local_58.y += 75.0f;
-					if (SMS_IsInSameCameraCube(local_58))
+					inCameraCube = SMS_IsInSameCameraCube(local_58);
+				}
+
+				if (inCameraCube) {
+					f32 fVar1;
+					f32 fVar2;
+					if (mThrowCtrl != nullptr) {
+						fVar1 = mPtrSaveNormal->mSLThrowTalkAcceptHeight.get();
+						fVar2 = mPtrSaveNormal->mSLThrowTalkAcceptDist.get();
+					} else {
+						if (mActorType == ACTOR_TYPE_NPC_SUNFLOWER_L) {
+							fVar2 = mPtrSaveNormal->mSLSunflowerLTalkDist.get();
+						} else {
+							fVar2 = mPtrSaveNormal->mTalkAcceptDist.get();
+						}
+						fVar1 = mPtrSaveNormal->mTalkAcceptHeight.get();
+					}
+
+					f32 fVar3;
+					if ((checkActionFlag(NPC_ACTION_UNK400 | NPC_ACTION_UNK1))
+					    || isSunflower()
+					    || mActorType == ACTOR_TYPE_NPC_BOARD) {
+						fVar3 = mPtrSaveNormal->mSLSitTalkAcceptDegree.get();
+					} else {
+						fVar3 = mPtrSaveNormal->mTalkAcceptDegree.get();
+					}
+
+					if (abs(SMS_GetMarioPos().y - mPosition.y) < fVar1
+					    && isInSight(SMS_GetMarioPos(), fVar2, fVar3, -1.0f)
+					    && MsIsInSight(
+					        SMS_GetMarioPos(), SHORTANGLE2DEG(*gpMarioAngleY),
+					        mPosition, fVar2,
+					        mPtrSaveNormal->mSLMarioTalkAcceptDegree.get(),
+					        0.0f))
 						bVar5 = true;
 				}
-
-				f32 fVar1;
-				f32 fVar2;
-				if (mThrowCtrl != nullptr) {
-					fVar1 = mPtrSaveNormal->mSLThrowTalkAcceptHeight.get();
-					fVar2 = mPtrSaveNormal->mSLThrowTalkAcceptDist.get();
-				} else {
-					if (mActorType == 0x400001A) {
-						fVar2 = mPtrSaveNormal->mSLSunflowerLTalkDist.get();
-					} else {
-						fVar2 = mPtrSaveNormal->mTalkAcceptDist.get();
-					}
-					fVar1 = mPtrSaveNormal->mTalkAcceptHeight.get();
-				}
-
-				f32 fVar3;
-				if ((checkActionFlag(NPC_ACTION_UNK400 | NPC_ACTION_UNK1))
-				    || isSunflower() || mActorType == 0x400001D) {
-					fVar3 = mPtrSaveNormal->mSLSitTalkAcceptDegree.get();
-				} else {
-					fVar3 = mPtrSaveNormal->mTalkAcceptDegree.get();
-				}
-
-				if (abs(SMS_GetMarioPos().y - mPosition.y) < fVar1
-				    && isInSight(SMS_GetMarioPos(), fVar2, fVar3, -1.0f)
-				    && MsIsInSight(
-				        SMS_GetMarioPos(), SHORTANGLE2DEG(*gpMarioAngleY),
-				        mPosition, fVar2,
-				        mPtrSaveNormal->mSLMarioTalkAcceptDegree.get(), 0.0f))
-					bVar5 = true;
 			}
 		}
 
 		if (bVar5) {
 			onLiveFlag(LIVE_FLAG_UNK20000);
 			if (checkLiveFlag(LIVE_FLAG_UNK40000)) {
+				bVar4 = true;
 				offLiveFlag(LIVE_FLAG_UNK40000);
 				const TNerveBase<TLiveActor>* current
 				    = mSpine->getCurrentNerve();
@@ -545,11 +550,11 @@ void TBaseNPC::changeNerveProc_()
 	unk15C->unk0 = 0;
 
 	if (latestNerve == &TNerveNPCSink::theNerve()) {
-		if (gpPollution->isPolluted(mPosition.x, mPosition.y, mPosition.z))
+		if (gpPollution->isPolluted(mPosition.x, unk1C4, mPosition.z))
 			return;
 
 		mSpine->setNext(&TNerveNPCRecoverFromSink::theNerve());
-		offHitFlag(HIT_FLAG_NO_COLLISION);
+		offHitFilter(HIT_FILTER_NO_COLLISION);
 		offLiveFlag(LIVE_FLAG_SINK_BOTTOM);
 		requestNpcAnm_(NPC_ANM_KIND_UNK1A, NPC_STOP_MOTION_BLEND_ON);
 		if (SMSGetMSound()->gateCheck(MSD_SE_NPC_APPEAR))
@@ -603,7 +608,7 @@ void TBaseNPC::setPosAndInitAfterSinkBottom()
 	unk1CC = 0;
 	unk1D0 = 0.0f;
 	if (cVar8 && isPollutionNpc() && !checkActionFlag(NPC_ACTION_UNK400)) {
-		onHitFlag(HIT_FLAG_NO_COLLISION);
+		onHitFilter(HIT_FILTER_NO_COLLISION);
 		mSpine->setDefaultNext();
 		mSpine->pushNerve(&TNerveNPCSink::theNerve());
 		mSpine->pushNerve(&TNerveNPCSink::theNerve());
@@ -614,7 +619,7 @@ void TBaseNPC::setPosAndInitAfterSinkBottom()
 		pos.y = unk1C4 - mIndividualParams->mSinkHeight.get();
 		mVelocity.set(0.0f, 0.0f, 0.0f);
 	} else {
-		offHitFlag(HIT_FLAG_NO_COLLISION);
+		offHitFilter(HIT_FILTER_NO_COLLISION);
 		mSpine->setDefaultNext();
 		mSpine->pushNerve(mSpine->getDefault());
 		pos.y += 2.0f;
@@ -625,7 +630,7 @@ void TBaseNPC::setPosAndInitAfterSinkBottom()
 
 	mPosition.set(pos);
 	mRotation.set(unk1A0);
-	mLinearVelocity.set(0.0f, 0.0f, 0.0f);
+	mPositionDelta.set(0.0f, 0.0f, 0.0f);
 	unk124->reset();
 	unk124->reset2();
 	goToShortestNextGraphNode();

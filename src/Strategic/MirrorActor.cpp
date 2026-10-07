@@ -43,7 +43,7 @@ void TMirrorActor::checkIsInMirror()
 	if (!(unk1A & 4)) {
 		local_18.set(mtx[0][3], mtx[1][3], mtx[2][3]);
 	} else {
-		local_18.set(*gpMarioPos);
+		local_18.set(SMS_GetMarioPos());
 	}
 
 	int uVar4 = gpCubeMirror->getDataNo(gpCubeMirror->getInCubeNo(local_18));
@@ -69,7 +69,7 @@ void TMirrorActor::perform(u32 cue, JDrama::TGraphics* graphics)
 		for (u16 i = 0; i < unk10->getModelData()->getJointNum(); ++i)
 			unk14->setAnmMtx(i, unk10->getAnmMtx(i));
 
-		for (u16 i = 0; i < unk10->getModelData()->getJointNum(); ++i)
+		for (u16 i = 0; i < unk10->getModelData()->getWEvlpMtxNum(); ++i)
 			unk14->setWeightAnmMtx(i, unk10->getWeightAnmMtx(i));
 	}
 

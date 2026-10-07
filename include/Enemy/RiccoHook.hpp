@@ -23,7 +23,6 @@ public:
 	TRiccoHookManager(const char* name = "フックマネージャ");
 
 	virtual void load(JSUMemoryInputStream&);
-	virtual void perform(u32 cue, JDrama::TGraphics* graphics);
 	virtual TSpineEnemy* createEnemyInstance();
 	virtual void createModelData();
 
@@ -65,7 +64,7 @@ public:
 	void moveHeldObject()
 	{
 		JGeometry::TVec3<f32> pos = mHeldObject->getPosition();
-		pos.add(mOwner->mLinearVelocity);
+		pos.add(mOwner->mPositionDelta);
 		mHeldObject->moveRequest(pos);
 	}
 

@@ -10,6 +10,9 @@
 #include <MarioUtil/TexUtil.hpp>
 #include <MarioUtil/PacketUtil.hpp>
 
+// rogue includes needed for matching sinit & bss
+#include <System/DummyStrings.hpp>
+
 const char cDirtyFileName[] = "/scene/map/pollution/H_ma_rak.bti";
 const char cDirtyTexName[]  = "H_ma_rak_dummy";
 
@@ -69,8 +72,8 @@ TMarioCap::TMarioCap(TMario* mario)
 	unk10[0]->calc();
 	unk10[1]->setBaseTRMtx(mtx);
 	unk10[1]->calc();
-	mMario->mModel->getModel()->setAnmMtx(mMario->mJointIdHead,
-	                                      unk10[2]->getBaseTRMtx());
+	unk10[2]->setBaseTRMtx(
+	    mMario->mModel->getModel()->getAnmMtx(mMario->mJointIdHead));
 	unk10[2]->calc();
 
 	unk20 = new TMultiMtxEffect();
@@ -122,8 +125,14 @@ void TMarioCap::createMirrorCap()
 	}
 }
 
-// UNUSED
-void TMarioCap::addDirty() { }
+void TMarioCap::addDirty()
+{
+	for (u16 i = 0; i < unkC->getModelData()->getMaterialNum(); ++i) {
+		J3DGXColor* color
+		    = unkC->getModelData()->getMaterialNodePointer(i)->getTevKColor(0);
+		color->color.a = mMario->mDirty;
+	}
+}
 
 void TMarioCap::perform(u32 cue, JDrama::TGraphics* graphics)
 {
@@ -199,13 +208,7 @@ void TMarioCap::perform(u32 cue, JDrama::TGraphics* graphics)
 		unkC->calc();
 		unk10[2]->calc();
 
-		for (u16 i = 0; i < unkC->getModelData()->getMaterialNum(); i++) {
-			J3DGXColor* color
-			    = unkC->getModelData()->getMaterialNodePointer(i)->getTevKColor(
-			        0);
-
-			color->color.a = mMario->mDirty;
-		}
+		addDirty();
 	}
 
 	if ((cue & CUE_CALC_VIEW) != 0) {

@@ -1,3 +1,4 @@
+#include <M3DUtil/InfectiousStrings.hpp>
 #include <Map/Map.hpp>
 #include <Map/MapCollisionData.hpp>
 #include <Map/MapModel.hpp>
@@ -26,7 +27,6 @@
 // rogue includes needed for matching sinit & bss
 #include <MSound/MSSetSound.hpp>
 #include <MSound/MSoundBGM.hpp>
-#include <M3DUtil/InfectiousStrings.hpp>
 
 TMap* gpMap;
 
@@ -83,19 +83,19 @@ static void initMare()
 
 	{
 		TMareEventDepressWall* event
-		    = new TMareEventDepressWall("イベント(マーレへこむ壁)");
+		    = new TMareEventDepressWall("イベント（マーレへこむ壁）");
 		event->init1stEvent();
 		group->getChildren().push_back(event);
 	}
 	{
 		TMareEventDepressWall* event
-		    = new TMareEventDepressWall("イベント(マーレへこむ壁)");
+		    = new TMareEventDepressWall("イベント（マーレへこむ壁）");
 		event->init2ndEvent();
 		group->getChildren().push_back(event);
 	}
 	{
 		TMareEventDepressWall* event
-		    = new TMareEventDepressWall("イベント(マーレへこむ壁)");
+		    = new TMareEventDepressWall("イベント（マーレへこむ壁）");
 		event->init3rdEvent();
 		group->getChildren().push_back(event);
 	}
@@ -133,9 +133,9 @@ static void initStageCommon()
 		TMapStaticObj* sea = new TMapStaticObj("波（遠景）");
 		sea->init("sea");
 
-		TMapStaticObj* indirect = new TMapStaticObj("インダイレクト波");
-		indirect->init("SeaIndirect");
-		group->getChildren().push_back(indirect);
+		sea = new TMapStaticObj("インダイレクト波");
+		sea->init("SeaIndirect");
+		group->getChildren().push_back(sea);
 
 		TMapObjWaterFilter* filter
 		    = new TMapObjWaterFilter("水中カメラフィルタ");
@@ -246,29 +246,27 @@ void TMap::update()
 		break;
 	}
 
-	if (gpMarDirector->unk124 != 0)
-		return;
-
-	if (gpCamera->isDemoCamera())
-		return;
-
-	if (gpMarDirector->getCurrentMap() == 0x39
-	    || gpMarDirector->getCurrentMap() == 0x10)
-		return;
-
-	if (SMS_CheckMarioFlag(MARIO_FLAG_VISIBLE))
-		return;
-
-	const JGeometry::TVec3<f32>& camPos = gpCamera->getUnk124();
-	f32 height = gpMapObjWave->getHeight(camPos.x, camPos.y, camPos.z);
-	if (height == gpCamera->getUnk124().y || gpCamera->getUnk124().y > height) {
-		if (!unk20) {
-			unk20 = 1;
-			MSSeCallBack::setWaterCameraFir(false);
+	if (gpMarDirector->unk124 == 0) {
+		if (!gpCamera->isDemoCamera()) {
+			if (gpMarDirector->getCurrentMap() != 0x39
+			    && gpMarDirector->getCurrentMap() != 0x10) {
+				if (!SMS_CheckMarioFlag(MARIO_FLAG_VISIBLE)) {
+					const JGeometry::TVec3<f32>& camPos = gpCamera->getUnk124();
+					f32 height
+					    = gpMapObjWave->getHeight(camPos.x, camPos.y, camPos.z);
+					if (height == gpCamera->getUnk124().y
+					    || gpCamera->getUnk124().y > height) {
+						if (!unk20) {
+							unk20 = 1;
+							MSSeCallBack::setWaterCameraFir(false);
+						}
+					} else if (unk20) {
+						unk20 = 0;
+						MSSeCallBack::setWaterCameraFir(true);
+					}
+				}
+			}
 		}
-	} else if (unk20) {
-		unk20 = 0;
-		MSSeCallBack::setWaterCameraFir(true);
 	}
 }
 
@@ -293,7 +291,7 @@ const TBGCheckData* TMap::intersectLine(const JGeometry::TVec3<f32>& param_1,
                                         bool param_3,
                                         JGeometry::TVec3<f32>* param_4) const
 {
-	mCollisionData->intersectLine(param_1, param_2, param_3, param_4);
+	return mCollisionData->intersectLine(param_1, param_2, param_3, param_4);
 }
 
 bool TMap::isTouchedOneWall(f32 x, f32 y, f32 z, f32 radius) const
@@ -305,8 +303,8 @@ bool TMap::isTouchedOneWallAndMoveXZ(f32* x, f32 y, f32* z, f32 radius) const
 {
 	TBGWallCheckRecord record(*x, y, *z, radius, 1, 0);
 
-	int r = mCollisionData->checkWalls(&record);
-	if (r != 0 ? true : false) {
+	bool r = mCollisionData->checkWalls(&record) != 0 ? true : false;
+	if (r) {
 		*x = record.mCenter.x;
 		*z = record.mCenter.z;
 		return true;

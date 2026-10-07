@@ -118,8 +118,8 @@ static void evGetNPCType(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	int result    = -1;
 	TBaseNPC* npc = (TBaseNPC*)getNameRefPtr(interp->pop());
 	if (npc)
-		result = npc->getActorType() - 0x4000001;
-	interp->push(result);
+		result = npc->getActorType() - ACTOR_TYPE_NPC_MONTE_M;
+	interp->push(TSpcSlice(result));
 }
 
 static void evSetFlagNPCDontTalk(TSpcTypedInterp<TEventWatcher>* interp,
@@ -207,16 +207,19 @@ static void evIsNearActors(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	int count = 0;
 
 	if (arg_num >= 3) {
-		THitActor* which = (THitActor*)getNameRefPtr(
-		    interp->mProcessStack.getFromTop(arg_num - 1));
+		THitActor* which
+		    = (THitActor*)getNameRefPtr(interp->mProcessStack.getFromBottom(
+		        interp->mProcessStack.size() - arg_num));
 		if (which) {
 			f32 dist
 			    = interp->mProcessStack.getFromTop(arg_num - 2).getDataFloat();
 
+			u32 i = 2;
 			count = 1;
-			for (u32 i = 2; i < arg_num; ++i) {
+			for (; i < arg_num; ++i) {
 				THitActor* other = (THitActor*)getNameRefPtr(
-				    interp->mProcessStack.getFromTop(arg_num - 1 - i));
+				    interp->mProcessStack.getFromBottom(
+				        interp->mProcessStack.size() - (arg_num - i)));
 				if (other) {
 					JGeometry::TVec3<f32> diff = which->mPosition;
 					diff -= other->mPosition;
@@ -227,7 +230,7 @@ static void evIsNearActors(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 		}
 	}
 
-	for (int i = 0; i < arg_num; ++i)
+	for (int i = 0; i < (int)arg_num; ++i)
 		interp->pop();
 
 	interp->push(count);
@@ -239,7 +242,7 @@ static void evGetTalkNPC(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 
 	TBaseNPC* npc = SMSGetMarDirector()->getTalkingNPC();
 
-	interp->push(!npc ? 0 : (int)npc);
+	interp->push(TSpcSlice(npc ? (int)npc : 0));
 }
 
 static void evGetTalkNPCName(TSpcTypedInterp<TEventWatcher>* interp,
@@ -249,10 +252,13 @@ static void evGetTalkNPCName(TSpcTypedInterp<TEventWatcher>* interp,
 
 	TBaseNPC* npc = SMSGetMarDirector()->getTalkingNPC();
 
-	if (!npc)
-		interp->push("");
-	else
-		interp->push(npc->getName());
+	if (!npc) {
+		const char* name = "";
+		interp->push(name);
+	} else {
+		const char* name = npc->getName();
+		interp->push(name);
+	}
 }
 
 // TODO: `TSpcSlice(interp->pop()).getDataInt()` is a placeholder for something
@@ -312,7 +318,7 @@ static void evIsTalkModeNow(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 {
 	interp->verifyArgNum(0, &arg_num);
 	int value = SMSGetMarDirector()->isTalkModeNow() ? 1 : 0;
-	interp->push(value);
+	interp->push(TSpcSlice(value));
 }
 
 static void evSetFlagNPCCanTaken(TSpcTypedInterp<TEventWatcher>* interp,
@@ -376,10 +382,10 @@ static void evSetHide4LiveActor(TSpcTypedInterp<TEventWatcher>* interp,
 	if (liveActor) {
 		if (value) {
 			liveActor->onLiveFlag(LIVE_FLAG_HIDDEN);
-			liveActor->onHitFlag(HIT_FLAG_NO_COLLISION);
+			liveActor->onHitFilter(HIT_FILTER_NO_COLLISION);
 		} else {
 			liveActor->offLiveFlag(LIVE_FLAG_HIDDEN);
-			liveActor->offHitFlag(HIT_FLAG_NO_COLLISION);
+			liveActor->offHitFilter(HIT_FILTER_NO_COLLISION);
 		}
 	}
 
@@ -398,10 +404,10 @@ static void evSetDead4LiveActor(TSpcTypedInterp<TEventWatcher>* interp,
 	if (liveActor) {
 		if (value) {
 			liveActor->onLiveFlag(LIVE_FLAG_DEAD);
-			liveActor->onHitFlag(HIT_FLAG_NO_COLLISION);
+			liveActor->onHitFilter(HIT_FILTER_NO_COLLISION);
 		} else {
 			liveActor->offLiveFlag(LIVE_FLAG_DEAD);
-			liveActor->offHitFlag(HIT_FLAG_NO_COLLISION);
+			liveActor->offHitFilter(HIT_FILTER_NO_COLLISION);
 		}
 	}
 
@@ -462,6 +468,7 @@ static void evSetEventEnd(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 
 static void evSetNextStage(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 {
+	u16 nextStage;
 	interp->verifyArgNum(2, &arg_num);
 	int scenario = TSpcSlice(interp->pop()).getDataInt();
 	int stage    = TSpcSlice(interp->pop()).getDataInt();
@@ -469,8 +476,8 @@ static void evSetNextStage(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	// This function reads the global directly. The rest of the file goes
 	// through SMSGetMarDirector(), but here the accessor makes the match worse
 	// (94.8% -> 92.4%), so the original must have had the bare global.
-	gpMarDirector->setNextStage((scenario & 0xff) + ((stage + 1) << 8),
-	                            nullptr);
+	nextStage = (scenario & 0xff) + ((stage + 1) << 8);
+	gpMarDirector->setNextStage(nextStage, nullptr);
 
 	interp->push();
 }
@@ -486,7 +493,7 @@ static void evRegisterMovie(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 static void evGameOver(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 {
 	interp->verifyArgNum(0, &arg_num);
-	SMSGetMarDirector()->onUnk4CFlag(0x1);
+	SMSGetMarDirector()->onFlag(TMarDirector::DIRECTOR_FLAG_SHINE_GET_PENDING);
 	interp->push();
 }
 
@@ -503,14 +510,12 @@ static void evSetGraffitoMultiplied(TSpcTypedInterp<TEventWatcher>* interp,
 	interp->verifyArgNum(1, &arg_num);
 	int enable = TSpcSlice(interp->pop()).getDataInt();
 
-	TPollutionManager* pollution = gpPollution;
-	int i                        = 0;
-	if (enable) {
-		for (; i < pollution->getJointModelNum(); ++i)
-			pollution->getLayer(i)->startSpread();
-	} else {
-		for (; i < pollution->getJointModelNum(); ++i)
-			pollution->getLayer(i)->stopSpread();
+	for (int i = 0; i < gpPollution->getJointModelNum(); ++i) {
+		TPollutionLayer* layer = gpPollution->getLayer(i);
+		if (enable)
+			layer->startSpread();
+		else
+			layer->stopSpread();
 	}
 
 	interp->push();
@@ -625,7 +630,7 @@ static void evInsertTimer(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	int p1 = interp->pop().getDataInt();
 	int p2 = interp->pop().getDataInt();
 
-	if (p2 == 0)
+	if (p2 == 1)
 		SMSGetMarDirector()->getConsole()->startAppearTimer(0, p1);
 	else if (p2 == 2)
 		SMSGetMarDirector()->getConsole()->startAppearTimer(1, p1);
@@ -703,7 +708,8 @@ static void evKillMushroom1up(TSpcTypedInterp<TEventWatcher>* interp,
                               u32 arg_num)
 {
 	interp->verifyArgNum(1, &arg_num);
-	((TMushroom1up*)getNameRefPtr(interp->pop()))->kill();
+	TMushroom1up* mushroom = (TMushroom1up*)getNameRefPtr(interp->pop());
+	mushroom->kill();
 	interp->push();
 }
 
@@ -841,16 +847,16 @@ static void evCheckWoodBox(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	int p1 = interp->pop().getDataInt();
 	int p2 = interp->pop().getDataInt();
 
-	int count = p2 - p1 + 1;
+	int count = p1 - p2 + 1;
 
 	char buffer[] = "ゲーム木箱00";
 	for (int i = p2; i <= p1; ++i) {
 		if (i < 10) {
-			buffer[10] = '0' + i;
-			buffer[11] = 0;
+			buffer[sizeof(buffer) - 3] = '0' + i;
+			buffer[sizeof(buffer) - 2] = 0;
 		} else {
-			buffer[10] = '0' + i / 10;
-			buffer[11] = '0' + i % 10;
+			buffer[sizeof(buffer) - 3] = '0' + i / 10;
+			buffer[sizeof(buffer) - 2] = '0' + i % 10;
 		}
 		TMapObjBase* obj
 		    = static_cast<TMapObjBase*>(JDrama::TNameRefGen::search(buffer));
@@ -871,11 +877,11 @@ static void evRefreshWoodBox(TSpcTypedInterp<TEventWatcher>* interp,
 	char buffer[] = "ゲーム木箱00";
 	for (int i = p2; i <= p1; ++i) {
 		if (i < 10) {
-			buffer[10] = '0' + i;
-			buffer[11] = 0;
+			buffer[sizeof(buffer) - 3] = '0' + i;
+			buffer[sizeof(buffer) - 2] = 0;
 		} else {
-			buffer[10] = '0' + i / 10;
-			buffer[11] = '0' + i % 10;
+			buffer[sizeof(buffer) - 3] = '0' + i / 10;
+			buffer[sizeof(buffer) - 2] = '0' + i % 10;
 		}
 		TMapObjBase* obj
 		    = static_cast<TMapObjBase*>(JDrama::TNameRefGen::search(buffer));
@@ -895,11 +901,11 @@ static void evKillWoodBox(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	char buffer[] = "ゲーム木箱00";
 	for (int i = p2; i <= p1; ++i) {
 		if (i < 10) {
-			buffer[10] = '0' + i;
-			buffer[11] = 0;
+			buffer[sizeof(buffer) - 3] = '0' + i;
+			buffer[sizeof(buffer) - 2] = 0;
 		} else {
-			buffer[10] = '0' + i / 10;
-			buffer[11] = '0' + i % 10;
+			buffer[sizeof(buffer) - 3] = '0' + i / 10;
+			buffer[sizeof(buffer) - 2] = '0' + i % 10;
 		}
 		TMapObjBase* obj
 		    = static_cast<TMapObjBase*>(JDrama::TNameRefGen::search(buffer));
@@ -916,10 +922,13 @@ static void evIsInsideCube(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	int cubeId = interp->pop().getDataInt();
 
 	// TODO: getPos10cmAbove or something like that?
+	int value;
+
 	JGeometry::TVec3<f32> pos = gpMarioOriginal->mPosition;
 	pos.y += 10.0f;
 
-	interp->push(gpCubeArea->isInCube(pos, cubeId) ? 1 : 0);
+	value = gpCubeArea->isInCube(pos, cubeId) ? 1 : 0;
+	interp->push(value);
 }
 
 static void evSetMarioWaiting(TSpcTypedInterp<TEventWatcher>* interp,
@@ -1008,9 +1017,10 @@ static void evSetTransScale(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	TMapObjBase* obj = (TMapObjBase*)getNameRefPtr(interp->pop());
 
 	obj->makeObjAppeared();
-	obj->changeObjSRT(JGeometry::TVec3<f32>(sx, sy, sz),
-	                  JGeometry::TVec3<f32>(0.0f, 0.0f, 0.0f),
-	                  JGeometry::TVec3<f32>(tx, ty, tz));
+	JGeometry::TVec3<f32> scale(sx, sy, sz);
+	JGeometry::TVec3<f32> rot(0.0f, 0.0f, 0.0f);
+	JGeometry::TVec3<f32> trans(tx, ty, tz);
+	obj->changeObjSRT(scale, rot, trans);
 
 	interp->push();
 }
@@ -1047,7 +1057,7 @@ static void evEggYoshiStartFruit(TSpcTypedInterp<TEventWatcher>* interp,
 {
 	interp->verifyArgNum(1, &arg_num);
 	TEggYoshi* egg = (TEggYoshi*)getNameRefPtr(interp->pop());
-	if (!egg->checkLiveFlag(LIVE_FLAG_DEAD))
+	if (egg->checkLiveFlag(LIVE_FLAG_DEAD) == false)
 		egg->startFruit();
 	interp->push();
 }
@@ -1127,9 +1137,9 @@ static void evSetCollision(TSpcTypedInterp<TEventWatcher>* interp, u32 arg_num)
 	THitActor* hitActor = (THitActor*)getNameRefPtr(interp->pop());
 
 	if (!value)
-		hitActor->onHitFlag(HIT_FLAG_NO_COLLISION);
+		hitActor->onHitFilter(HIT_FILTER_NO_COLLISION);
 	else
-		hitActor->offHitFlag(HIT_FLAG_NO_COLLISION);
+		hitActor->offHitFilter(HIT_FILTER_NO_COLLISION);
 
 	interp->push();
 }
@@ -1193,12 +1203,14 @@ static void evAppear8RedCoinsAndTimer(TSpcTypedInterp<TEventWatcher>* interp,
                                       u32 arg_num)
 {
 	interp->verifyArgNum(0, &arg_num);
-	TRedCoinSwitch* swtch = static_cast<TRedCoinSwitch*>(
-	    JDrama::TNameRefGen::search("赤コイン用スイッチ"));
+	const char* name = "赤コイン用スイッチ";
+	TRedCoinSwitch* swtch
+	    = static_cast<TRedCoinSwitch*>(JDrama::TNameRefGen::search(name));
 
 	int iVar9 = swtch->unk138;
 	for (int i = 0; i < 8; ++i) {
-		TCoinRed* coin = (TCoinRed*)gpItemManager->makeObjAppeared(0x2000000f);
+		TCoinRed* coin
+		    = (TCoinRed*)gpItemManager->makeObjAppeared(ACTOR_TYPE_COIN_RED);
 		coin->killByTimer(iVar9 - coin->unk150);
 		coin->unk158.set(coin->mPosition.x, coin->mPosition.y + 70.0f,
 		                 coin->mPosition.z);
@@ -1268,13 +1280,35 @@ static void evIsWaterMelonIsReached(TSpcTypedInterp<TEventWatcher>* interp,
 	TBigWatermelon* melon = (TBigWatermelon*)interp->pop().getDataInt();
 
 	int result = 0;
-	f32 dx     = -4660.0f - melon->mPosition.x;
-	f32 dz     = 12000.0f - melon->mPosition.z;
-	if (dx * dx + dz * dz <= 90000.0f)
+	JGeometry::TVec3<f32> delta;
+	delta.sub(JGeometry::TVec3<f32>(-4660.0f, 0.0f, 12000.0f),
+	          melon->mPosition);
+	delta.y = 0.0f;
+	if (delta.squared() <= 90000.0f)
 		result = 1;
 
 	interp->push(result);
 }
+
+#ifdef VERSION_GMSP01
+static void evStartMontemanBGM(TSpcTypedInterp<TEventWatcher>* interp,
+                               u32 arg_num)
+{
+	interp->verifyArgNum(0, &arg_num);
+	MSBgm::stopTrackBGM(0, 10);
+	MSBgm::startBGM(MSD_STR_SPACEWORLD);
+	SMSGetMSound()->startSoundSystemSE(MSD_SE_SY_RACE_START, 0, nullptr, 0);
+	interp->push();
+}
+
+static void evStartMontemanFanfare(TSpcTypedInterp<TEventWatcher>* interp,
+                                   u32 arg_num)
+{
+	interp->verifyArgNum(0, &arg_num);
+	MSBgm::startBGM(MSD_BGM_CAMERA_KAGE);
+	interp->push();
+}
+#endif
 
 template <> void TSpcTypedBinary<TEventWatcher>::initUserBuiltin()
 {
@@ -1356,6 +1390,10 @@ template <> void TSpcTypedBinary<TEventWatcher>::initUserBuiltin()
   bindSystemDataToSymbol("appearReadyGo", (u32)&evAppearReadyGo);
   bindSystemDataToSymbol("onNeutralMarioKey", (u32)&evOnNeutralMarioKey);
   bindSystemDataToSymbol("invalidatePad", (u32)&evInvalidatePad);
+#ifdef VERSION_GMSP01
+  bindSystemDataToSymbol("startMontemanBGM", (u32)&evStartMontemanBGM);
+  bindSystemDataToSymbol("startMontemanFanfare", (u32)&evStartMontemanFanfare);
+#endif
   bindSystemDataToSymbol("checkWoodBox", (u32)&evCheckWoodBox);
   bindSystemDataToSymbol("refreshWoodBox", (u32)&evRefreshWoodBox);
   bindSystemDataToSymbol("killWoodBox", (u32)&evKillWoodBox);

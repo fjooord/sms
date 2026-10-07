@@ -18,7 +18,7 @@ void TSpider::bind(TLiveActor* param_1)
 {
 	TSpineEnemy* enemy = (TSpineEnemy*)param_1;
 
-	JGeometry::TVec3<f32> local_114 = enemy->mLinearVelocity;
+	JGeometry::TVec3<f32> local_114 = enemy->mPositionDelta;
 	JGeometry::TVec3<f32> local_50  = enemy->mPosition;
 	local_50.add(local_114);
 	f32 linearX = local_114.x;
@@ -53,7 +53,7 @@ void TSpider::bind(TLiveActor* param_1)
 		}
 	}
 
-	if (local_60->checkFlag(BG_CHECK_FLAG_ILLEGAL)) {
+	if (local_60->isIllegalData()) {
 		if (unk4 <= 0) {
 			enemy->kill();
 		} else {
@@ -78,8 +78,8 @@ void TSpider::bind(TLiveActor* param_1)
 	enemy->mGroundHeight = fVar3;
 	enemy->mGroundPlane  = local_60;
 
-	TBGWallCheckRecord local_90(local_50.x, local_50.y, local_50.z,
-	                            enemy->mBodyScale * enemy->mHeadHeight, 1, 0);
+	TBGWallCheckRecord local_90(local_50.x, local_50.y + enemy->getHeadHeight(),
+	                            local_50.z, enemy->getWallRadius(), 1, 0);
 
 	JGeometry::TVec3<f32> local_bc;
 	f32 unaff_f29;
@@ -119,7 +119,7 @@ void TSpider::bind(TLiveActor* param_1)
 			unk8 = 0x3C;
 
 			normal.scale(enemy->getWallRadius() * unk10);
-			local_bc.sub(normal, local_90.mCenter);
+			local_bc -= normal;
 
 			unk10 += 1.0f / 60.0f;
 			if (unk10 > 1.0f)
@@ -130,5 +130,5 @@ void TSpider::bind(TLiveActor* param_1)
 	JGeometry::TVec3<f32> local_118 = local_bc;
 	local_118.y += unaff_f29 - enemy->getHeadHeight();
 
-	enemy->mLinearVelocity = local_118 - enemy->mPosition;
+	enemy->mPositionDelta = local_118 - enemy->mPosition;
 }

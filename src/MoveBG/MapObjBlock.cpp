@@ -239,7 +239,7 @@ void TIceBlock::control()
 		emitter->setGlobalDynamicsScale(mScaling);
 	}
 
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	setDamageRadius(mScaling.x * 80.0f);
 	setDamageHeight(mScaling.y * 250.0f);
 
@@ -255,7 +255,7 @@ void TIceBlock::control()
 		                          nullptr, 0, 4);
 
 		setObjHitData(0);
-		onHitFlag(HIT_FLAG_NO_COLLISION);
+		onHitFilter(HIT_FILTER_NO_COLLISION);
 		removeMapCollision();
 
 		if (mScaling.x < 0.1f)
@@ -295,10 +295,10 @@ void TBrickBlock::kill()
 
 BOOL TBrickBlock::receiveMessage(THitActor* sender, u32 message)
 {
-	if (sender->isActorType(0x80000001) && marioHeadAttack()) {
+	if (sender->isActorType(ACTOR_TYPE_MARIO) && marioHeadAttack()) {
 		kill();
 		return TRUE;
-	} else if (sender->isActorType(0x8000005)
+	} else if (sender->isActorType(ACTOR_TYPE_BOSS_GESSO)
 	           && message == HIT_MESSAGE_ATTACK) {
 		kill();
 		return TRUE;
@@ -335,6 +335,15 @@ void TJuiceBlock::kill()
 	makeObjDead();
 }
 
+#ifdef VERSION_GMSP01
+void TJuiceBlock::touchActor(THitActor* actor)
+{
+	if (actor->isHitCategory(HIT_CATEGORY_MAP_OBJECT)
+	    && !actor->isActorType(ACTOR_TYPE_JUICE_BLOCK))
+		kill();
+}
+#endif
+
 void TTelesaBlock::initMapObj() { TMapObjBase::initMapObj(); }
 
 void TTelesaBlock::perform(u32 cue, JDrama::TGraphics* graphics)
@@ -369,10 +378,7 @@ void TTelesaBlock::setGroundCollision()
 	if (!mMapCollisionManager)
 		return;
 
-	if (!mMapCollisionManager->getUnk8())
-		return;
-
-	mMapCollisionManager->getUnk8()->moveSRT(mPosition, mRotation, unk140);
+	mMapCollisionManager->moveActiveCollisionSRT(mPosition, mRotation, unk140);
 }
 
 BOOL TSuperHipDropBlock::receiveMessage(THitActor* sender, u32 message)
@@ -380,7 +386,8 @@ BOOL TSuperHipDropBlock::receiveMessage(THitActor* sender, u32 message)
 	if (message == HIT_MESSAGE_SUPER_HIP_DROP) {
 		kill();
 		if (mMonteBlockBroken)
-			TFlagManager::getInstance()->setBool(true, 0x1038C);
+			TFlagManager::getInstance()->setBool(
+			    true, MSF_PIANTA_PIPE_SLAB_DESTROYED);
 
 		SMSGetMSound()->startSoundActor(MSD_SE_OBJ_SUPERBLOCK_BREAK, &mPosition,
 		                                0, nullptr, 0, 4);
@@ -395,7 +402,8 @@ void TSuperHipDropBlock::loadAfter()
 
 	if (strcmp("モンテゲートブロック", mName) == 0) {
 		mMonteBlockBroken = true;
-		if (TFlagManager::getInstance()->getBool(0x1038C)) {
+		if (TFlagManager::getInstance()->getBool(
+		        MSF_PIANTA_PIPE_SLAB_DESTROYED)) {
 			makeObjDead();
 		}
 		onLiveFlag(LIVE_FLAG_UNK8);

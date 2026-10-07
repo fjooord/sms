@@ -52,15 +52,15 @@ TLiveActor* CPolarSubCamera::getNoticeActor_()
 	if (mNoticeActor != nullptr && !mNoticeActor->checkLiveFlag(LIVE_FLAG_DEAD)
 	    && !mNoticeActor->checkLiveFlag(LIVE_FLAG_HIDDEN)) {
 
-		if (mNoticeActor->mPosition.squared(*gpMarioPos)
+		if (mNoticeActor->mPosition.squared(SMS_GetMarioPos())
 		    < CLBSquared<f32>(mSaveNotice->mOffDist.get())) {
 			JGeometry::TVec2<f32> clipPos;
+			f32 clipMax = mSaveNotice->mOffClipRatio.get();
 			CLBCalc2DFPos(&clipPos, unk16C, unk1EC, mNoticeActor->mPosition,
 			              nullptr, false);
 
 			// TODO: inline
-			f32 clipMax  = mSaveNotice->mOffClipRatio.get();
-			f32 clipMin  = mSaveNotice->mOffClipRatio.get();
+			f32 clipMin  = -clipMax;
 			bool inClipX = false;
 			bool inClipY = false;
 			if (clipMin <= clipPos.x && clipPos.x <= clipMax)
@@ -69,7 +69,8 @@ TLiveActor* CPolarSubCamera::getNoticeActor_()
 			if (inClipX && clipMin <= clipPos.y && clipPos.y <= clipMax)
 				inClipY = true;
 
-			if (inClipY)
+			bool isInside = inClipX && inClipY;
+			if (isInside)
 				return mNoticeActor;
 		}
 	}
@@ -85,17 +86,17 @@ TLiveActor* CPolarSubCamera::getNoticeActor_()
 		if (mNoticeActor != nullptr && unk2A0[i] == mNoticeActor)
 			continue;
 
-		f32 dist2 = unk2A0[i]->mPosition.squared(*gpMarioPos);
+		f32 dist2 = unk2A0[i]->mPosition.squared(SMS_GetMarioPos());
 		if (dist2 >= closestDist2)
 			continue;
 
 		JGeometry::TVec2<f32> clipPos;
+		f32 clipMax = mSaveNotice->mOnClipRatio.get();
 		CLBCalc2DFPos(&clipPos, unk16C, unk1EC, unk2A0[i]->mPosition, nullptr,
 		              false);
 
 		// TODO: inline
-		f32 clipMax  = mSaveNotice->mOnClipRatio.get();
-		f32 clipMin  = mSaveNotice->mOnClipRatio.get();
+		f32 clipMin  = -clipMax;
 		bool inClipX = false;
 		bool inClipY = false;
 		if (clipMin <= clipPos.x && clipPos.x <= clipMax) {
@@ -104,10 +105,11 @@ TLiveActor* CPolarSubCamera::getNoticeActor_()
 		if (inClipX && clipMin <= clipPos.y && clipPos.y <= clipMax) {
 			inClipY = true;
 		}
-		if (!inClipY)
+		bool isInside = inClipX && inClipY;
+		if (!isInside)
 			continue;
 
-		if (!MsIsInSight(*gpMarioPos, DEG2SHORTANGLE(*gpMarioAngleY),
+		if (!MsIsInSight(*gpMarioPos, DEG2SHORTANGLE(SMS_GetMarioAngleY()),
 		                 unk2A0[i]->mPosition, dist2,
 		                 mSaveNotice->mOnDegree.get(), -1.0f))
 			continue;
@@ -159,14 +161,13 @@ void CPolarSubCamera::calcNoticeTargetYrot_(const Vec& target)
 		                           mPos.z - target.z);
 		MsVECNormalize(&diff, &diff);
 		// TODO: many inlines from cameralib maybe?
-		f32 dx       = diff.x * 500.0f + mPos.x;
-		f32 dz       = diff.z * 500.0f + mPos.z;
-		s16 ang      = matan(dz - mCurrentTarget.mTarget.z,
-		                     dx - mCurrentTarget.mTarget.x);
-		int absAngle = ang - mCurrentTarget.mYaw >= 0
-		                   ? ang - mCurrentTarget.mYaw
-		                   : -(ang - mCurrentTarget.mYaw);
-		f32 ratio    = DEG2SHORTANGLE(1.0f) * (f32)absAngle;
+		f32 dx        = diff.x * 500.0f + mPos.x;
+		f32 dz        = diff.z * 500.0f + mPos.z;
+		s16 ang       = matan(dz - mCurrentTarget.mTarget.z,
+		                      dx - mCurrentTarget.mTarget.x);
+		s16 angleDiff = mCurrentTarget.mYaw - ang;
+		int absAngle  = angleDiff >= 0 ? angleDiff : -angleDiff;
+		f32 ratio     = DEG2SHORTANGLE(1.0f) * (f32)absAngle;
 
 		f32 chase;
 		if (dist2 > farClip2) {

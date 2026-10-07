@@ -1,6 +1,6 @@
 #include <MoveBG/MapObjHide.hpp>
 
-#include <printf.h>
+#include <stdio.h>
 
 #include <MoveBG/Item.hpp>
 #include <MoveBG/ItemManager.hpp>
@@ -39,14 +39,14 @@ void THideObjBase::appearObj(f32 y_offset)
 void THideObjBase::appearObjFromPoint(const JGeometry::TVec3<f32>& point)
 {
 	if (mHiddenObj != nullptr && mAllowReveal) {
-		if (mHiddenObj->isActorType(0x20000013)) {
+		if (mHiddenObj->isActorType(ACTOR_TYPE_SHINE)) {
 			mHiddenObj->onLiveFlag(LIVE_FLAG_UNK10);
 			mHiddenObj->mPosition.set(mPosition);
 			((TShine*)mHiddenObj)->appearWithDemo(mHiddenShineDemoName);
 		} else {
 			TMapObjBase* obj;
-			if (mHiddenObj->isActorType(0x2000000E)) {
-				obj = gpItemManager->makeObjAppear(0x2000000E);
+			if (mHiddenObj->isActorType(ACTOR_TYPE_COIN)) {
+				obj = gpItemManager->makeObjAppear(ACTOR_TYPE_COIN);
 				if (!obj)
 					return;
 			} else {
@@ -75,9 +75,10 @@ void THideObjBase::emitEffect()
 
 BOOL THideObjBase::receiveMessage(THitActor* sender, u32 message)
 {
-	if (message == HIT_MESSAGE_UNK5
-	    && (sender->isActorType(0x2000000E) || sender->isActorType(0x2000000F)
-	        || sender->isActorType(0x20000010)))
+	if (message == HIT_MESSAGE_ATTACH
+	    && (sender->isActorType(ACTOR_TYPE_COIN)
+	        || sender->isActorType(ACTOR_TYPE_COIN_RED)
+	        || sender->isActorType(ACTOR_TYPE_COIN_BLUE)))
 		mAllowReveal = true;
 
 	return TMapObjBase::receiveMessage(sender, message);
@@ -89,14 +90,14 @@ void THideObjBase::loadAfter()
 	mHiddenObj
 	    = TMapObjBaseManager::newAndRegisterObjByEventID(mEventId, getName());
 	if (mHiddenObj != nullptr) {
-		if (mHiddenObj->isActorType(0x20000010)) {
+		if (mHiddenObj->isActorType(ACTOR_TYPE_COIN_BLUE)) {
 			bool isBlueCollected = TFlagManager::smInstance->getBlueCoinFlag(
 			    gpMarDirector->getCurrentMap(), mEventId);
 			if (isBlueCollected)
 				mAllowReveal = false;
 		}
 
-		if (mHiddenObj->isActorType(0x20000013)) {
+		if (mHiddenObj->isActorType(ACTOR_TYPE_SHINE)) {
 			size_t nameLen       = strlen(mName);
 			mHiddenShineDemoName = new char[nameLen + 0x13];
 			const char* name2    = mName;
@@ -250,22 +251,22 @@ void TFruitBasketEvent::countFruit(THitActor* fruit)
 	TFruitBasket::countFruit(fruit);
 
 	switch (fruit->getActorType()) {
-	case 0x40000394:
+	case ACTOR_TYPE_FRUIT_BANANA:
 		unk154[0] += 1;
 		break;
-	case 0x40000393:
+	case ACTOR_TYPE_FRUIT_DURIAN:
 		unk154[1] += 1;
 		break;
-	case 0x40000391:
+	case ACTOR_TYPE_FRUIT_PAPAYA:
 		unk154[2] += 1;
 		break;
-	case 0x40000392:
+	case ACTOR_TYPE_FRUIT_PINE:
 		unk154[3] += 1;
 		break;
-	case 0x40000390:
+	case ACTOR_TYPE_FRUIT_COCONUT:
 		unk154[4] += 1;
 		break;
-	case 0x40000395:
+	case ACTOR_TYPE_RED_PEPPER:
 		break;
 	default:
 		return;
@@ -304,7 +305,7 @@ THipDropHideObj::THipDropHideObj(const char* name)
 
 void TWaterHitPictureHideObj::afterFinishedAnim()
 {
-	if (isActorType(0x400001A1)) {
+	if (isActorType(ACTOR_TYPE_POSTER_TERESA)) {
 		SMSGetMSound()->startSoundActor(MSD_SE_OBJ_POSTER_RIP2, &mPosition, 0,
 		                                nullptr, 0, 4);
 		SMSGetMSound()->startSoundSystemSE(MSD_SE_SY_CLEAR_SIGN_BIG, 0, nullptr,
@@ -312,7 +313,7 @@ void TWaterHitPictureHideObj::afterFinishedAnim()
 	}
 
 	removeMapCollision();
-	onHitFlag(HIT_FLAG_CANNOT_GET_HIT);
+	onHitFilter(HIT_FILTER_NO_DAMAGE);
 	appearObjFromPoint(getObjAppearPos());
 	mState = STATE_FINISHED;
 }
@@ -351,7 +352,7 @@ u32 TWaterHitPictureHideObj::touchWater(THitActor* param_1)
 		                              0, 0, 0, 4);
 	}
 	forward(mSprayProgressSpeed);
-	if (isActorType(0x400001A1))
+	if (isActorType(ACTOR_TYPE_POSTER_TERESA))
 		soundBas(MSD_SE_OBJ_POSTER_RIP1, 200.0f, mSprayProgressSpeed);
 
 	return 1;
@@ -359,7 +360,7 @@ u32 TWaterHitPictureHideObj::touchWater(THitActor* param_1)
 
 void TWaterHitPictureHideObj::touchActor(THitActor* param_1)
 {
-	if (param_1->isActorType(0x4000005A))
+	if (param_1->isActorType(ACTOR_TYPE_WOOD_BARREL))
 		mState = STATE_HIT_BY_BARREL;
 }
 
@@ -389,12 +390,13 @@ void TWaterHitPictureHideObj::control()
 
 BOOL TWaterHitPictureHideObj::receiveMessage(THitActor* sender, u32 message)
 {
-	if (message == HIT_MESSAGE_UNK5
-	    && (sender->isActorType(0x2000000E) || sender->isActorType(0x2000000F)
-	        || sender->isActorType(0x20000010))) {
-		offHitFlag(HIT_FLAG_NO_COLLISION);
-		offHitFlag(HIT_FLAG_CANNOT_GET_HIT);
-		offHitFlag(HIT_FLAG_CANNOT_ATTACK);
+	if (message == HIT_MESSAGE_ATTACH
+	    && (sender->isActorType(ACTOR_TYPE_COIN)
+	        || sender->isActorType(ACTOR_TYPE_COIN_RED)
+	        || sender->isActorType(ACTOR_TYPE_COIN_BLUE))) {
+		offHitFilter(HIT_FILTER_NO_COLLISION);
+		offHitFilter(HIT_FILTER_NO_DAMAGE);
+		offHitFilter(HIT_FILTER_NO_ATTACK);
 		mState       = STATE_NORMAL;
 		mAllowReveal = true;
 		return TRUE;
@@ -403,7 +405,7 @@ BOOL TWaterHitPictureHideObj::receiveMessage(THitActor* sender, u32 message)
 	if (isState(STATE_FINISHED))
 		return FALSE;
 
-	if (sender->isActorType(0x4000005A)) {
+	if (sender->isActorType(ACTOR_TYPE_WOOD_BARREL)) {
 		mState = STATE_HIT_BY_BARREL;
 		return TRUE;
 	}
@@ -416,7 +418,7 @@ void TWaterHitPictureHideObj::loadAfter()
 	THideObjBase::loadAfter();
 
 	if (mHiddenObj != nullptr) {
-		if (mHiddenObj->isActorType(0x20000010)) {
+		if (mHiddenObj->isActorType(ACTOR_TYPE_COIN_BLUE)) {
 			bool isBlueCollected = TFlagManager::smInstance->getBlueCoinFlag(
 			    gpMarDirector->getCurrentMap(), mEventId);
 			if (isBlueCollected) {
@@ -426,7 +428,7 @@ void TWaterHitPictureHideObj::loadAfter()
 		}
 	}
 	switch (mActorType) {
-	case 0x40000012:
+	case ACTOR_TYPE_CHIP_SHINE:
 		mMinProgress = 32.0f;
 		mMaxProgress = 100.0f;
 		if (getModel()->getAnmMtx(0)[1][2] > 0.7f) {
@@ -437,26 +439,26 @@ void TWaterHitPictureHideObj::loadAfter()
 		unk15C   = 0.2f;
 		mReverse = false;
 		break;
-	case 0x40000013:
-	case 0x40000018:
-	case 0x40000019:
-	case 0x4000001A:
+	case ACTOR_TYPE_KOOPA_JR_SIGN_M:
+	case ACTOR_TYPE_SIGN_CIRCLE:
+	case ACTOR_TYPE_SIGN_CROSS:
+	case ACTOR_TYPE_SIGN_TRIANGLE:
 		mMinProgress = 20.0f;
 		mReverse     = true;
 		break;
-	case 0x40000020:
+	case ACTOR_TYPE_STAR_SIGN:
 		mSprayProgressSpeed = 1.2f;
 		mMinProgress        = 30.0f;
 		mMaxProgress        = 170.0f;
 		mReverse            = false;
 		break;
-	case 0x400001A2:
+	case ACTOR_TYPE_PICTURE_TERESA:
 		mMinProgress        = 0.0f;
 		mMaxProgress        = 200.0f;
 		mSprayProgressSpeed = 0.4f;
 		mReverse            = false;
 		break;
-	case 0x400001A1:
+	case ACTOR_TYPE_POSTER_TERESA:
 		mMinProgress = 0.0f;
 		mMaxProgress = 255.0f;
 		mReverse     = true;
@@ -472,7 +474,7 @@ void TWaterHitPictureHideObj::loadAfter()
 		if (TMapObjBase::isCoin(mHiddenObj))
 			mHiddenObj->offMapObjFlag(MAP_OBJ_FLAG_UNK10000000);
 
-		if (mHiddenObj->isActorType(0x20000013)) {
+		if (mHiddenObj->isActorType(ACTOR_TYPE_SHINE)) {
 			bool isShineCollected
 			    = TFlagManager::smInstance->getShineFlag(mHiddenObj->mEventId);
 			if (isShineCollected) {
@@ -540,14 +542,14 @@ TWaterHitPictureHideObj::TWaterHitPictureHideObj(const char* name)
 void THideObjPictureTwin::afterFinishedAnim()
 {
 	removeMapCollision();
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 
 	if (mHiddenObj != nullptr && mAllowReveal) {
 		TMapObjBase* obj = mHiddenObj;
 		if (TMapObjBase::isCoin(obj)) {
 			TCoin* coin = (TCoin*)obj;
-			if (coin->isActorType(0x2000000E)) {
-				obj = gpItemManager->makeObjAppear(0x2000000E);
+			if (coin->isActorType(ACTOR_TYPE_COIN)) {
+				obj = gpItemManager->makeObjAppear(ACTOR_TYPE_COIN);
 				if (obj == nullptr)
 					return;
 			}
@@ -573,8 +575,8 @@ void THideObjPictureTwin::afterFinishedAnim()
 		SMSGetMSound()->startSoundSystemSE(MSD_SE_SY_TIMECOIN_APPEAR, 0,
 		                                   nullptr, 0);
 
-		SMSGetMarDirector()->fireStartDemoCamera(unk178, &mPosition, -1, 0.0f,
-		                                         true, nullptr, 0, nullptr, 0);
+		SMSGetMarDirector()->fireStartDemoCamera(
+		    unk178, &obj->mPosition, -1, 0.0f, true, nullptr, 0, nullptr, 0);
 	}
 	mState = 3;
 }
@@ -591,7 +593,7 @@ void THideObjPictureTwin::loadAfter()
 		buffer[2] = mName[len + 2];
 		buffer[3] = mName[len + 3];
 
-		char buffer2[0x4C];
+		char buffer2[0x40];
 		snprintf(buffer2, 0x40, "ふたご落書きＢ００");
 		buffer2[len]     = buffer[0];
 		buffer2[len + 1] = buffer[1];
@@ -622,7 +624,7 @@ void TBreakHideObj::kill()
 {
 	startAnim(2);
 	removeMapCollision();
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	onLiveFlag(LIVE_FLAG_UNK10 | LIVE_FLAG_UNK8);
 	mStateTimer = -1;
 	mState      = 2;
@@ -630,8 +632,8 @@ void TBreakHideObj::kill()
 
 BOOL TBreakHideObj::receiveMessage(THitActor* sender, u32 message)
 {
-	if (message == 1) {
-		if (isActorType(0x400002C3)) {
+	if (message == HIT_MESSAGE_HIP_DROP) {
+		if (isActorType(ACTOR_TYPE_WATER_MELON_BLOCK)) {
 			emitAndScale(0x6B, 0, &mPosition);
 			emitAndScale(0x6C, 0, &mPosition);
 			SMSGetMSound()->startSoundActor(MSD_SE_OBJ_WATERMELON_BLOCK,
@@ -662,21 +664,22 @@ void TBreakHideObj::control()
 void TBreakHideObj::initMapObj()
 {
 	TMapObjBase::initMapObj();
-	if (isActorType(0x400002C3)) {
+	if (isActorType(ACTOR_TYPE_WATER_MELON_BLOCK)) {
 		SMS_LoadParticle("/scene/mapObj/WaterMelonBlockA.jpa", 0x6B);
 		SMS_LoadParticle("/scene/mapObj/WaterMelonBlockB.jpa", 0x6C);
 	}
 }
 
-void TWoodBox::fabricatedGroundKillCheck(f32 dX, f32 dY)
+void TWoodBox::killNearWoodBox(f32 dX, f32 dY) const
 {
 	const TBGCheckData* groundPlane;
-	f32 resY = gpMap->checkGround(dX + gpMarioPos->x, gpMarioPos->y + 1000.0f,
-	                              dY + gpMarioPos->z, &groundPlane);
-	if (resY + 10.0f > gpMarioPos->y) {
+	f32 resY = gpMap->checkGround(dX + SMS_GetMarioPos().x,
+	                              SMS_GetMarioPos().y + 1000.0f,
+	                              dY + SMS_GetMarioPos().z, &groundPlane);
+	if (resY + 10.0f > SMS_GetMarioPos().y) {
 		const TLiveActor* actor = groundPlane->getActor();
 		if (actor != nullptr && actor != this
-		    && actor->isActorType(0x4000001C)) {
+		    && actor->isActorType(ACTOR_TYPE_WOOD_BOX)) {
 			((TBreakHideObj*)actor)->kill();
 		}
 	}
@@ -685,7 +688,7 @@ void TWoodBox::kill()
 {
 	startAnim(2);
 	removeMapCollision();
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	onLiveFlag(LIVE_FLAG_UNK10 | LIVE_FLAG_UNK8);
 	mStateTimer = -1;
 	mState      = 2;
@@ -693,10 +696,10 @@ void TWoodBox::kill()
 	SMSGetMSound()->startSoundActor(MSD_SE_IT_BARREL_CRASH, &mPosition, 0,
 	                                nullptr, 0, 4);
 
-	fabricatedGroundKillCheck(50.0f, 50.0f);
-	fabricatedGroundKillCheck(50.0f, -50.0f);
-	fabricatedGroundKillCheck(-50.0f, 50.0f);
-	fabricatedGroundKillCheck(-50.0f, -50.0f);
+	killNearWoodBox(-50.0f, -50.0f);
+	killNearWoodBox(50.0f, -50.0f);
+	killNearWoodBox(-50.0f, 50.0f);
+	killNearWoodBox(50.0f, 50.0f);
 }
 
 void TWoodBox::loadAfter()

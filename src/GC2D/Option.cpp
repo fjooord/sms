@@ -648,8 +648,8 @@ void TOptionSoundUnit::toggle()
 void TOptionSoundUnit::adjust()
 {
 	adjustView();
-	const FabricatedSoundSettings& setting
-	    = cSoundSettings[mSelectionText->getNumber()];
+	int number                             = mSelectionText->getNumber();
+	const FabricatedSoundSettings& setting = cSoundSettings[number];
 	JAIGlobalParameter::setParamSoundOutputMode(setting.mOutputMode);
 }
 
@@ -801,7 +801,7 @@ void TOptionControl::load()
 #pragma dont_inline on
 void TOptionControl::loadSetting()
 {
-	switch (TFlagManager::getInstance()->getFlag(0xA0000)) {
+	switch (TFlagManager::getInstance()->getFlag(MSF_SOUND_MODE)) {
 	case 0:
 		mSoundOption->setValue(0);
 		break;
@@ -813,7 +813,7 @@ void TOptionControl::loadSetting()
 		break;
 	}
 
-	switch (TFlagManager::getInstance()->getFlag(0x90000)) {
+	switch (TFlagManager::getInstance()->getFlag(MSF_RUMBLE)) {
 	case 0:
 		mRumbleOption->setValue(TOptionRumbleUnit::RUMBLE_TYPE_UNK0);
 		break;
@@ -863,8 +863,6 @@ bool TOptionControl::movementOption()
 	return false;
 }
 
-static inline void fake(TOptionSoundUnit* unit) { int v = unit->getValue(); }
-
 // mario walks back from the options screen to the card select screen
 bool TOptionControl::movementOption2Card()
 {
@@ -873,8 +871,7 @@ bool TOptionControl::movementOption2Card()
 		mScreen->search('oya1')->hide();
 		mScreen->search('oya2')->hide();
 
-		if (mInitialRumbleValue == mRumbleOption->getValue())
-			fake(mSoundOption);
+		isChangedSetting();
 
 		return true;
 	}
@@ -932,15 +929,17 @@ void TOptionControl::checkInput()
 
 void TOptionControl::writeValue()
 {
-	TFlagManager::getInstance()->setFlag(0x90000, mRumbleOption->getValue());
-	TFlagManager::getInstance()->setFlag(0xA0000, mSoundOption->getValue());
+	TFlagManager::getInstance()->setFlag(MSF_RUMBLE, mRumbleOption->getValue());
+	TFlagManager::getInstance()->setFlag(MSF_SOUND_MODE,
+	                                     mSoundOption->getValue());
 }
 
 bool TOptionControl::isChangedSetting() const
 {
-	bool result = true;
+	TOptionRumbleUnit::RumbleType current = mRumbleOption->getValue();
+	bool result                           = true;
 
-	if (mInitialRumbleValue == mRumbleOption->getValue()
+	if (current == mInitialRumbleValue
 	    && mInitialSoundValue == mSoundOption->getValue())
 		result = false;
 
@@ -949,6 +948,7 @@ bool TOptionControl::isChangedSetting() const
 
 void TOptionControl::resetChangedSetting()
 {
-	mInitialRumbleValue = mRumbleOption->getValue();
-	mInitialSoundValue  = mSoundOption->getValue();
+	TOptionRumbleUnit::RumbleType value = mRumbleOption->getValue();
+	mInitialRumbleValue                 = value;
+	mInitialSoundValue                  = mSoundOption->getValue();
 }

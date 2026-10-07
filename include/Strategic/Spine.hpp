@@ -3,7 +3,7 @@
 
 #include <Strategic/SolidStack.hpp>
 #include <dolphin/os.h>
-#include <types.h>
+#include <dolphin/types.h>
 
 class TSpineEnemy;
 template <class T> class TNerveBase;
@@ -38,6 +38,8 @@ public:
 		return mPrevious;
 	}
 
+	bool isNerve(Nerve nerve) const { return getLatestNerve() == nerve; }
+
 	// matching
 	void pushNerve(Nerve nerve)
 	{
@@ -55,17 +57,8 @@ public:
 	virtual ~TSpineBase() { }
 	virtual void update()
 	{
-		if (mCurrent == nullptr) {
-			Nerve nerve = popNerve();
-
-			if (nerve) {
-				if (mCurrent != nullptr)
-					mPrevious = mCurrent;
-
-				mCurrent = nerve;
-				mTime    = 0;
-			}
-		}
+		if (mCurrent == nullptr)
+			skip();
 
 		if (mCurrent != nullptr) {
 			BOOL cont = mCurrent->execute(this);
@@ -95,15 +88,6 @@ public:
 	}
 
 	// fabricated
-	Nerve popNerve()
-	{
-		if (mVertebrae.size() > 0)
-			return mVertebrae.pop();
-		else
-			return nullptr;
-	}
-
-	// fabricated
 	void setNext(Nerve nerve)
 	{
 		if (mCurrent != nullptr)
@@ -115,7 +99,11 @@ public:
 
 	void skip()
 	{
-		Nerve nerve = popNerve();
+		Nerve nerve;
+		if (mVertebrae.size() > 0)
+			nerve = mVertebrae.pop();
+		else
+			nerve = nullptr;
 
 		if (nerve) {
 			if (mCurrent != nullptr)

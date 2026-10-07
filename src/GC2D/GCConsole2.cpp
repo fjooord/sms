@@ -22,6 +22,7 @@
 #include <JSystem/JUtility/JUTTexture.hpp>
 #include <JSystem/JKernel/JKRFileLoader.hpp>
 #include <JSystem/JDrama/JDRNameRefGen.hpp>
+#include <Strategic/TakeActor.hpp>
 #include <JSystem/JSupport/JSUMemoryInputStream.hpp>
 #include <JSystem/JSupport/JSUMemoryOutputStream.hpp>
 #include <JSystem/J2D/J2DTextBox.hpp>
@@ -67,6 +68,22 @@ static inline void setEmitterToPaneCenter(JPABaseEmitter* emitter,
 }
 
 // fabricated
+static inline void setEmitterToRectCenter(JPABaseEmitter* emitter,
+                                          JUTRect bounds)
+{
+	emitter->mGlobalTranslation.set(bounds.x1 + bounds.getWidth() * 0.5f,
+	                                bounds.y1 + bounds.getHeight() * 0.5f,
+	                                0.0f);
+}
+
+// fabricated
+static inline int getOffsetForBelowScreen(TExPane* pane)
+{
+	// setPaneOffset moves this to y1 = 465
+	return 465 - pane->getInitialBounds().y1;
+}
+
+// fabricated
 static inline void syncPaneBounds(TBoundPane* pane)
 {
 	pane->unk4 = pane->getPane()->mBounds;
@@ -79,8 +96,9 @@ static inline void detachPaneFromParent(J2DPane* pane)
 }
 
 // fabricated
-static inline void drawGaugeQuadF32(const JUTRect& rect, int top, int bottom,
-                                    f32 topTex, f32 bottomTex)
+static inline void drawGaugeQuadF32(const JUTRect& rect, const int& top,
+                                    const int& bottom, f32 topTex,
+                                    f32 bottomTex)
 {
 	GXBegin(GX_QUADS, GX_VTXFMT0, 4);
 	GXPosition2f32((f32)rect.x1, (f32)top);
@@ -91,6 +109,7 @@ static inline void drawGaugeQuadF32(const JUTRect& rect, int top, int bottom,
 	GXTexCoord2f32(1.0f, bottomTex);
 	GXPosition2f32((f32)rect.x1, (f32)bottom);
 	GXTexCoord2f32(0.0f, bottomTex);
+	GXEnd();
 }
 
 // fabricated
@@ -677,7 +696,7 @@ static inline void setTwoDigits(TBoundPane** panes, JUTTexture** textures,
 // fabricated
 static inline void updateMarioLifeCounter(TGCConsole2* console)
 {
-	int lives = TFlagManager::smInstance->getFlag(0x20001);
+	int lives = TFlagManager::smInstance->getFlag(MSF_LIFE_COUNT);
 	if (lives > console->unk3AC[0]) {
 		if (lives > 99)
 			lives = 99;
@@ -769,7 +788,7 @@ static inline void setBlendDigit(TBlendPane* pane, JUTTexture** textures,
 // fabricated
 static inline void updateRedCoinCounter(TGCConsole2* console)
 {
-	int redCoins = TFlagManager::smInstance->getFlag(0x60000);
+	int redCoins = TFlagManager::smInstance->getFlag(MSF_RED_COIN_COUNT);
 	if (redCoins != (int)console->unk444) {
 		if (redCoins < 0)
 			redCoins = 0;
@@ -856,10 +875,10 @@ static inline void updateJetCounterAnimation(TGCConsole2* console)
 	bool blend = false;
 
 	if (console->unk404 == console->unk408) {
-		flag  = 0x60001;
+		flag  = MSF_BALLOON_COUNT;
 		blend = true;
 	} else if (console->unk404 == console->unk40C) {
-		flag = 0x60002;
+		flag = MSF_PIANTA_CLEAN_COUNT;
 	}
 
 	if (flag < 0)
@@ -925,7 +944,7 @@ static inline void updateCounterState(TGCConsole2* console)
 {
 	TFlagManager* flags = TFlagManager::smInstance;
 
-	int coins = flags->getFlag(0x40002);
+	int coins = flags->getFlag(MSF_GOLD_COIN_COUNT);
 	if (coins > 999)
 		coins = 999;
 	else if (coins < 0)
@@ -954,17 +973,17 @@ static inline void updateCounterState(TGCConsole2* console)
 		console->unk30 = 0;
 	}
 
-	int blueTotal = flags->getFlag(0x40001);
+	int blueTotal = flags->getFlag(MSF_BLUE_COIN_COUNT);
 	if ((int)console->unk168 != blueTotal) {
 		++console->unk168;
 
 		int spentBlueCoins = 0;
 		for (int flag = 0x46; flag < 0x56; ++flag)
-			if (TFlagManager::smInstance->getFlag(0x10000 + flag) != 0)
+			if (TFlagManager::smInstance->getFlag(MSF_SHINE_BASE + flag) != 0)
 				++spentBlueCoins;
 
 		for (int flag = 0x6C; flag <= 0x73; ++flag)
-			if (TFlagManager::smInstance->getFlag(0x10000 + flag) != 0)
+			if (TFlagManager::smInstance->getFlag(MSF_SHINE_BASE + flag) != 0)
 				++spentBlueCoins;
 		int blueValue = console->unk168 - spentBlueCoins * 10;
 		if (blueValue < 0)
@@ -988,7 +1007,7 @@ static inline void updateCounterState(TGCConsole2* console)
 			console->unk16C = 0;
 	}
 
-	int shines = flags->getFlag(0x40000);
+	int shines = flags->getFlag(MSF_SHINE_COUNT);
 	if (console->unk8A == 0 && (int)console->unk64 != shines)
 		console->unk8A = 1;
 
@@ -996,11 +1015,13 @@ static inline void updateCounterState(TGCConsole2* console)
 		if (console->unk8A > 0xFB) {
 			int spentBlueCoins = 0;
 			for (int flag = 0x46; flag < 0x56; ++flag)
-				if (TFlagManager::smInstance->getFlag(0x10000 + flag) != 0)
+				if (TFlagManager::smInstance->getFlag(MSF_SHINE_BASE + flag)
+				    != 0)
 					++spentBlueCoins;
 
 			for (int flag = 0x6C; flag <= 0x73; ++flag)
-				if (TFlagManager::smInstance->getFlag(0x10000 + flag) != 0)
+				if (TFlagManager::smInstance->getFlag(MSF_SHINE_BASE + flag)
+				    != 0)
 					++spentBlueCoins;
 			int target = blueTotal - spentBlueCoins * 10;
 			if (console->unk170 != target) {
@@ -1272,7 +1293,7 @@ static inline void updateShineAppearState(TGCConsole2* console)
 	bool done = console->processAppearStar(console->unk5C);
 	done      = console->processDownCoin(console->unk5C) && done;
 	if (done) {
-		int shines = TFlagManager::smInstance->getFlag(0x40000);
+		int shines = TFlagManager::smInstance->getFlag(MSF_SHINE_COUNT);
 		if ((int)console->unk24 != shines)
 			console->unk24 = shines;
 		console->unk34 = 0;
@@ -1423,11 +1444,12 @@ static inline void updateMarioAppearState(TGCConsole2* console)
 	if (console->unk3A && console->processAppearMario(console->unk70++)) {
 		if (console->unk3AC[1]) {
 			if (console->unk70 == 0xc8) {
-				int lives = TFlagManager::smInstance->getFlag(0x20001);
+				int lives = TFlagManager::smInstance->getFlag(MSF_LIFE_COUNT);
 				if (lives > 99)
 					lives = 99;
 				setTwoDigits(console->unk39C, console->unkE0, lives);
-				TFlagManager::smInstance->setBool(false, 0x30002);
+				TFlagManager::smInstance->setBool(false,
+				                                  MSF_LOST_LIFE_IN_PREV_STAGE);
 				console->endCameraDemo();
 				console->unk3A = 0;
 			}
@@ -1733,9 +1755,9 @@ void TGCConsole2::load(JSUMemoryInputStream& stream)
 	unk1C4 = new TBoundPane(unkB0, '\0l_0');
 
 	for (int i = 0; i < 9; ++i) {
-		unk17C[i]     = unkB0->search('lm01' + (i << 8));
-		unk17C[i + 1] = unkB0->search('lm02' + (i << 8));
-		unk1D0[i]     = unk17C[i]->getBounds();
+		unk17C[i * 2]     = unkB0->search('lm01' + (i << 8));
+		unk17C[i * 2 + 1] = unkB0->search('lm02' + (i << 8));
+		unk1D0[i]         = unk17C[i * 2]->getBounds();
 	}
 
 	unk260 = new TBoundPane(unkB0, 'lm_0');
@@ -1766,8 +1788,8 @@ void TGCConsole2::load(JSUMemoryInputStream& stream)
 		if (i != 0) {
 			unk2AC[i] = (J2DPicture*)unkB0->search('w_m1' + i);
 
-			unk2AC[i]->setBlendKonstColor(0.0f, 0.0f, 0.0f, 0.0f);
-			unk2AC[i]->setBlendKonstAlpha(1.0f, 0.0f, 0.0f, 0.0f);
+			unk2A0[i]->setBlendKonstColor(0.0f, 0.0f, 0.0f, 0.0f);
+			unk2A0[i]->setBlendKonstAlpha(1.0f, 0.0f, 0.0f, 0.0f);
 
 			unk2AC[i]->hide();
 		}
@@ -1922,15 +1944,15 @@ void TGCConsole2::loadAfter()
 	initHiddenPaneAbove(unk3A8);
 	unk3A8->getPane()->hide();
 
-	unk168 = TFlagManager::smInstance->getFlag(0x40001);
+	unk168 = TFlagManager::smInstance->getFlag(MSF_BLUE_COIN_COUNT);
 
 	int spentBlueCoins = 0;
 	for (int flag = 0x46; flag < 0x56; ++flag)
-		if (TFlagManager::smInstance->getFlag(0x10000 + flag) != 0)
+		if (TFlagManager::smInstance->getFlag(MSF_SHINE_BASE + flag) != 0)
 			++spentBlueCoins;
 
 	for (int flag = 0x6C; flag <= 0x73; ++flag)
-		if (TFlagManager::smInstance->getFlag(0x10000 + flag) != 0)
+		if (TFlagManager::smInstance->getFlag(MSF_SHINE_BASE + flag) != 0)
 			++spentBlueCoins;
 
 	int blueCoinValue = unk168 - spentBlueCoins * 10;
@@ -1939,7 +1961,7 @@ void TGCConsole2::loadAfter()
 	setBlueCoinDigits(unk154, unkE0, blueCoinValue);
 	unk170 = blueCoinValue;
 
-	unk20 = TFlagManager::smInstance->getFlag(0x40002);
+	unk20 = TFlagManager::smInstance->getFlag(MSF_GOLD_COIN_COUNT);
 	if (unk20 > 999)
 		unk20 = 999;
 	else if (unk20 < 0)
@@ -1947,7 +1969,7 @@ void TGCConsole2::loadAfter()
 	unk6C = unk20;
 	setCounterDigits(unkD4, unkE0, unk20);
 
-	unk24 = TFlagManager::smInstance->getFlag(0x40000);
+	unk24 = TFlagManager::smInstance->getFlag(MSF_SHINE_COUNT);
 	if (unk24 > 999)
 		unk24 = 999;
 	else if (unk24 < 0)
@@ -1955,7 +1977,7 @@ void TGCConsole2::loadAfter()
 	unk64 = unk24;
 	setShineDigits(unk134, unkE0, unk24);
 
-	int lives = TFlagManager::smInstance->getFlag(0x20001);
+	int lives = TFlagManager::smInstance->getFlag(MSF_LIFE_COUNT);
 	if (lives > 99)
 		lives = 99;
 	unk3AC[0] = lives;
@@ -2032,7 +2054,7 @@ void TGCConsole2::loadAfter()
 	unk144->setStatus(JPABaseEmitter::STATUS_STOP_EMIT);
 
 	TNozzleBase* nozzle = gpMarioOriginal->mWaterGun->getCurrentNozzle();
-	unk28               = *(u32*)((u8*)nozzle + 0xCC);
+	unk28               = nozzle->mEmitParams.mAmountMax.get();
 
 	unkBC = static_cast<TBathtub*>(JDrama::TNameRefGen::search("バスタブ"));
 	unkC0 = static_cast<TBossEel*>(JDrama::TNameRefGen::search("めおとウナギ"));
@@ -2044,10 +2066,9 @@ void TGCConsole2::entryHelpActor(THelpActor* param_1)
 	if (unk8C < 32) {
 		unk90[unk8C] = param_1;
 
-		static_cast<TIdxGroupObj*>(
-		    JDrama::TNameRefGen::search("マップグループ"))
-		    ->getChildren()
-		    .push_back(param_1);
+		TIdxGroupObj* group = static_cast<TIdxGroupObj*>(
+		    JDrama::TNameRefGen::search("マップグループ"));
+		group->getChildren().push_back(param_1);
 
 		++unk8C;
 	}
@@ -2075,7 +2096,9 @@ void TGCConsole2::startCameraDemo()
 		return;
 	}
 
-	if (unk50 || !TFlagManager::smInstance->getBool(0x30002) && unk39)
+	if (unk50
+	    || !TFlagManager::smInstance->getBool(MSF_LOST_LIFE_IN_PREV_STAGE)
+	           && unk39)
 		return;
 
 	unk50 = 1;
@@ -2106,10 +2129,11 @@ void TGCConsole2::startCameraDemo()
 	startDisappearMario();
 	startDownLeftBot();
 
-	if (TFlagManager::smInstance->getBool(0x30002)) {
+	if (TFlagManager::smInstance->getBool(MSF_LOST_LIFE_IN_PREV_STAGE)) {
 		unk108->getPane()->hide();
 		startAppearMario(true);
-	} else if (gpMarDirector->checkUnk4CFlag(0x8000)) {
+	} else if (gpMarDirector->checkFlag(
+	               TMarDirector::DIRECTOR_FLAG_SHINE_TAKEN)) {
 		startAppearStar();
 	} else {
 		startDisappearStar();
@@ -2140,7 +2164,7 @@ void TGCConsole2::endCameraDemo()
 	unk50 = 0;
 
 	if (!unk2F8->isInterpolatorAtZero() && !unk45
-	    && !TFlagManager::smInstance->getBool(0x30002)) {
+	    && !TFlagManager::smInstance->getBool(MSF_LOST_LIFE_IN_PREV_STAGE)) {
 		unk45 = 1;
 		unk59 = 1;
 		unk7C = 0;
@@ -2171,14 +2195,15 @@ void TGCConsole2::endCameraDemo()
 		unk426 = 0;
 	}
 
-	if (!gpMarDirector->checkUnk4CFlag(0x8000)
+	if (!gpMarDirector->checkFlag(TMarDirector::DIRECTOR_FLAG_SHINE_TAKEN)
 	    && !unk108->getPane()->isVisible())
 		startAppearCoin();
 }
 
 void TGCConsole2::startAppearTank()
 {
-	if (unk45 || TFlagManager::smInstance->getBool(0x30002)) {
+	if (unk45
+	    || TFlagManager::smInstance->getBool(MSF_LOST_LIFE_IN_PREV_STAGE)) {
 		return;
 	}
 
@@ -2245,12 +2270,13 @@ void TGCConsole2::startDisappearCoin()
 	unk4D = true;
 	unk5A = true;
 
+	int offset;
 	if (unk140->isInterpolatorAtZero())
 		unk140->updatePaneOffset(
 		    40, 0,
-		    -(unk140->mInitialBounds.y2 + unk128->getPane()->getHeight() + 1));
+		    -(1 + unk140->mInitialBounds.y2 + unk128->getPane()->getHeight()));
 
-	int offset = -(unk108->mInitialBounds.y2 + 1);
+	offset = -(unk108->mInitialBounds.y2 + 1);
 	unk108->updatePaneOffset(40, 0, offset - unkC8->getPane()->getHeight());
 
 	unk124->setStatus(JPABaseEmitter::STATUS_STOP_EMIT);
@@ -2373,17 +2399,17 @@ void TGCConsole2::startDownLeftBot()
 	unk5A = 1;
 
 	if (unk44C->getPane()->isVisible() && unk44C->isInterpolatorAtZero()) {
-		unk44C->updatePaneOffset(20, 0, 525 - unk44C->getInitialBounds().y1);
+		unk44C->updatePaneOffset(20, 0, getOffsetForBelowScreen(unk44C) + 60);
 		unk51C = 1;
 	}
 
 	if (unk428->getPane()->isVisible()) {
-		unk428->updatePaneOffset(20, 0, 525 - unk428->getInitialBounds().y1);
+		unk428->updatePaneOffset(20, 0, getOffsetForBelowScreen(unk428) + 60);
 		unk448 = 1;
 	}
 
 	if (unk3FC->getPane()->isVisible()) {
-		unk3FC->updatePaneOffset(20, 0, 525 - unk3FC->getInitialBounds().y1);
+		unk3FC->updatePaneOffset(20, 0, getOffsetForBelowScreen(unk3FC) + 60);
 		unk426 = 1;
 	}
 }
@@ -2442,7 +2468,7 @@ void TGCConsole2::startDisappearTelop()
 
 void TGCConsole2::startDisappearTimer()
 {
-	unk44C->updatePaneOffset(40, 0, 525 - unk44C->getInitialBounds().y1);
+	unk44C->updatePaneOffset(40, 0, getOffsetForBelowScreen(unk44C) + 60);
 	unk3F = 1;
 	unk5A = 1;
 }
@@ -2825,16 +2851,14 @@ void TGCConsole2::drawWaterBack()
 		}
 
 		drawGaugeQuadF32(bounds, fillTop, bounds.y2, hiddenRatio, 1.0f);
-	} else if (unk48) {
-		if (unk30C != 0) {
+	} else {
+		if (unk48 && unk30C != 0) {
 			unk274->setPanePosition(90, JUTPoint(0, 0), JUTPoint(0, -100),
 			                        JUTPoint(0, 0));
 			unk30C = 0;
 			unk49  = 1;
 		}
 
-		drawGaugeQuadF32(bounds, bounds.y1, bounds.y2, 0.0f, 1.0f);
-	} else {
 		drawGaugeQuadF32(bounds, bounds.y1, bounds.y2, 0.0f, 1.0f);
 	}
 
@@ -2868,7 +2892,7 @@ void TGCConsole2::startAppearMario(bool param_1)
 		unk39C[i]->getPane()->hide();
 
 	if (param_1) {
-		int lives = TFlagManager::smInstance->getFlag(0x20001) + 1;
+		int lives = TFlagManager::smInstance->getFlag(MSF_LIFE_COUNT) + 1;
 		if (lives > 99)
 			lives = 99;
 
@@ -2937,6 +2961,8 @@ void TGCConsole2::setTimer(s32 param_1)
 				timerValue = unk514 - timerValue;
 			}
 		}
+	} else {
+		timerValue = param_1;
 	}
 
 	// Cap at 5999.99 seconds (99:59.99)
@@ -2985,7 +3011,7 @@ void TGCConsole2::setTimer(s32 param_1)
 		SMSGetMSound()->playTimer(timerValue * 10);
 	}
 
-	unk4FC = param_1;
+	unk4FC = timerValue;
 }
 
 void TGCConsole2::startMoveTimer(int param_1)
@@ -3077,11 +3103,11 @@ bool TGCConsole2::processAppearStar(int param_1)
 		                        cDownMidPoint);
 	}
 
-	int shines = TFlagManager::smInstance->getFlag(0x40000);
+	int shines = TFlagManager::smInstance->getFlag(MSF_SHINE_COUNT);
 	for (int i = 0; i < 3; ++i) {
 		if (param_1 == i * 6 + 28) {
 			if (i == 2) {
-				if ((!unk50 && shines >= 100) || (unk50 && shines > 100))
+				if ((!unk50 && shines >= 100) || (shines > 100 && unk50))
 					unk134[i]->getPane()->show();
 			} else {
 				unk134[i]->getPane()->show();
@@ -3091,15 +3117,15 @@ bool TGCConsole2::processAppearStar(int param_1)
 		}
 	}
 
-	TFlagManager::smInstance->getFlag(0x40001);
+	TFlagManager::smInstance->getFlag(MSF_BLUE_COIN_COUNT);
 
 	int blueCoins = 0;
 	for (int flag = 0x46; flag < 0x56; ++flag)
-		if (TFlagManager::smInstance->getFlag(0x10000 + flag) != 0)
+		if (TFlagManager::smInstance->getFlag(MSF_SHINE_BASE + flag) != 0)
 			++blueCoins;
 
 	for (int flag = 0x6C; flag <= 0x73; ++flag)
-		if (TFlagManager::smInstance->getFlag(0x10000 + flag) != 0)
+		if (TFlagManager::smInstance->getFlag(MSF_SHINE_BASE + flag) != 0)
 			++blueCoins;
 
 	int blueCoinValue = unk168 - blueCoins * 10;
@@ -3183,9 +3209,7 @@ bool TGCConsole2::processDownCoin(int param_1)
 
 	isFinished &= unk108->update();
 
-	JUTRect bounds(unkCC->getPane()->mGlobalBounds);
-	unk124->mGlobalTranslation.set(bounds.x1 + bounds.getWidth() * 0.5f,
-	                               bounds.y1 + bounds.getHeight() * 0.5f, 0.0f);
+	setEmitterToRectCenter(unk124, unkCC->getPane()->mGlobalBounds);
 
 	return isFinished;
 }
@@ -3264,9 +3288,7 @@ bool TGCConsole2::processAppearCoin(int param_1)
 			updateDownBlendPaneState(unkD4[i], isFinished);
 	}
 
-	JUTRect bounds(unkCC->getPane()->mGlobalBounds);
-	unk124->mGlobalTranslation.set(bounds.x1 + bounds.getWidth() * 0.5f,
-	                               bounds.y1 + bounds.getHeight() * 0.5f, 0.0f);
+	setEmitterToRectCenter(unk124, unkCC->getPane()->mGlobalBounds);
 
 	return isFinished;
 }
@@ -3344,7 +3366,9 @@ void TGCConsole2::checkChangeTelopArray()
 			unk570 = scDolpicNewsDolpic0;
 			break;
 		case 1:
-			if (*(u32*)((u8*)unkC4 + 0x68) != 0)
+			if (static_cast<TTakeActor*>(static_cast<JDrama::TNameRef*>(unkC4))
+			        ->getHolder()
+			    != nullptr)
 				unk570 = scDolpicNewsDolpic1;
 			else
 				unk570 = nullptr;
@@ -3362,23 +3386,24 @@ void TGCConsole2::checkChangeTelopArray()
 			unk570 = scDolpicNewsDolpic10;
 			break;
 		case 5:
-			if (TFlagManager::smInstance->getBool(0x50001)) {
-				if (TFlagManager::smInstance->getBool(0x50002))
+			if (TFlagManager::smInstance->getBool(MSF_RICCO_UNLOCKABLE)) {
+				if (TFlagManager::smInstance->getBool(MSF_GELATO_UNLOCKABLE))
 					unk570 = scDolpicNewsDolpic5_1;
 				else
 					unk570 = scDolpicNewsDolpic5_2;
 			} else {
-				if (TFlagManager::smInstance->getBool(0x50002))
+				if (TFlagManager::smInstance->getBool(MSF_GELATO_UNLOCKABLE))
 					unk570 = scDolpicNewsDolpic5_3;
 				else
 					unk570 = scDolpicNewsDolpic5_4;
 			}
 			break;
 		case 8: {
-			int eventState = TFlagManager::smInstance->getFlag(0x60003);
+			int eventState
+			    = TFlagManager::smInstance->getFlag(MSF_SHADOW_MARIO_EVENT);
 			switch (eventState) {
 			case 0:
-				if (TFlagManager::smInstance->getBool(0x1038F)) {
+				if (TFlagManager::smInstance->getBool(MSF_YOSHI_UNLOCKED)) {
 					if (TFlagManager::smInstance->getNozzleRight(1, 0)
 					    || TFlagManager::smInstance->getNozzleRight(1, 1))
 						unk570 = scDolpicNewsDolpic8_6;
@@ -3388,14 +3413,15 @@ void TGCConsole2::checkChangeTelopArray()
 					if (TFlagManager::smInstance->getNozzleRight(1, 0)
 					    || TFlagManager::smInstance->getNozzleRight(1, 1))
 						unk570 = scDolpicNewsDolpic8_5;
-					else if (TFlagManager::smInstance->getFlag(0x40000) >= 20)
+					else if (TFlagManager::smInstance->getFlag(MSF_SHINE_COUNT)
+					         >= 20)
 						unk570 = scDolpicNewsDolpic8_7;
 					else
 						unk570 = scDolpicNewsDolpic8_1;
 				}
 				break;
 			case 1:
-				if (TFlagManager::smInstance->getBool(0x1038F))
+				if (TFlagManager::smInstance->getBool(MSF_YOSHI_UNLOCKED))
 					unk570 = scDolpicNewsDolpic8_1;
 				else
 					unk570 = scDolpicNewsDolpic8_2;
@@ -3719,6 +3745,7 @@ void TGCConsole2::drawJuice(J2DOrthoGraph& graph, u32 color)
 	GXTexCoord2s8(1, 1);
 	GXPosition2f32((f32)bounds.x1, (f32)bounds.y2);
 	GXTexCoord2s8(0, 1);
+	GXEnd();
 
 	graph.setup2D();
 
@@ -3815,6 +3842,7 @@ void TGCConsole2::drawWater(J2DOrthoGraph& graph)
 		GXTexCoord2s8(1, 1);
 		GXPosition2f32((f32)left, (f32)bottom);
 		GXTexCoord2s8(0, 1);
+		GXEnd();
 	}
 
 	graph.setup2D();
@@ -3855,7 +3883,9 @@ void TGCConsole2::perform(u32 flags, JDrama::TGraphics* graphics)
 	if (flags & 1) {
 		if (!unk50) {
 			if (gpCamera->isDemoCamera() || SMS_CheckMarioFlag(0x400)
-			    || (!unk3AC[1] && TFlagManager::smInstance->getBool(0x30002)))
+			    || (!unk3AC[1]
+			        && TFlagManager::smInstance->getBool(
+			            MSF_LOST_LIFE_IN_PREV_STAGE)))
 				startCameraDemo();
 		} else if (!gpCamera->isDemoCamera() && !SMS_CheckMarioFlag(0x400)) {
 			endCameraDemo();

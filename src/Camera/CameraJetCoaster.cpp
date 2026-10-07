@@ -25,8 +25,9 @@
 // big and only used in one function. Also, dunno even if the size is correct
 inline void CPolarSubCamera::drawJetCoasterBalloonMessage_()
 {
-	u32 flagCount = TFlagManager::smInstance->getFlag(0x60001U);
-	u32 objCount  = gpItemManager->getObjNumWithActorType(0x40000132U);
+	u32 flagCount = TFlagManager::smInstance->getFlag(MSF_BALLOON_COUNT);
+	u32 objCount
+	    = gpItemManager->getObjNumWithActorType(ACTOR_TYPE_BALLOON_KOOPA_JR);
 
 	if (unk2B8->unk38 > 2) {
 		unk2B8->unk38 -= 1;
@@ -42,7 +43,8 @@ inline void CPolarSubCamera::drawJetCoasterBalloonMessage_()
 
 	s32 balloonCode = -1;
 	if (flagCount == objCount) {
-		TFlagManager::smInstance->setBool(true, 0x30005U);
+		TFlagManager::smInstance->setBool(
+		    true, MSF_POPPED_ALL_BALLOONS_IN_PREV_STAGE);
 		unk2B8->unk38 = 300;
 		balloonCode   = 0xE002D;
 	} else {
@@ -110,7 +112,7 @@ void CPolarSubCamera::ctrlJetCoasterCamera_()
 		if (startedLButton)
 			setUpToLButtonCamera_(CAMERA_MODE_JET_COASTER);
 
-		f32 stickY = -unk120->mCompSPos[5];
+		f32 stickY = -unk120->mCompSPos[1];
 		if (mTargetFreezeFrames == 0)
 			getNozzleTopPos_(&mCurrentTarget.mTarget);
 
@@ -155,41 +157,19 @@ void CPolarSubCamera::ctrlJetCoasterCamera_()
 		JGeometry::TVec3<f32> offsetUp = mUp;
 		JGeometry::TRotation3<TMtx33f> rotation(toTarget, -1.570796f);
 		JGeometry::TVec3<f32> offsetUpTmp = offsetUp;
-		rotation.mult33(offsetUpTmp, offsetUp);
+		CLBMultTranspose33(rotation, offsetUpTmp, offsetUp);
 		offsetUp *= mCurrentParams->mOffsetLookatXZ;
 
-		mCurrentTarget.unk18 += offsetUpTmp;
-		newTarget += offsetUpTmp;
+		mCurrentTarget.unk18 += offsetUp;
+		newTarget += offsetUp;
 
-		unk254 = CLBDegToShortAngle(MsGetRotFromYaxisZ(newTarget));
+		unk254 = CLBDegToShortAngle(MsGetRotFromYaxisZ(toroccoAxisY));
 		mFovy  = mCurrentParams->mFovy;
 	} else {
 		if (startedLButton)
 			setUpFromLButtonCamera_();
 
-		// Update jetcoaster manual offsets and chase towards limits
-		{
-			TCameraJetCoaster* jc = unk2B8;
-
-			jc->unk8 -= unk120->mCompSPos[7]
-			            * (f32)jc->unk0->mSLOffsetAngleXManualSpeed.get();
-
-			jc->unkA += unk120->mCompSPos[6]
-			            * (f32)jc->unk0->mSLOffsetAngleYManualSpeed.get();
-
-			jc->unk8
-			    = MsClamp<s16>(jc->unk8, -jc->unk0->mSLOffsetAngleXLimit.get(),
-			                   jc->unk0->mSLOffsetAngleXLimit.get());
-			jc->unkA
-			    = MsClamp<s16>(jc->unkA, -jc->unk0->mSLOffsetAngleYLimit.get(),
-			                   jc->unk0->mSLOffsetAngleYLimit.get());
-
-			CLBChaseAngleDecrease(&jc->unk4, jc->unk8,
-			                      jc->unk0->mSLOffsetAngleXChase.get());
-			CLBChaseAngleDecrease(&jc->unk6, jc->unkA,
-			                      jc->unk0->mSLOffsetAngleYChase.get());
-		}
-		// TODO: probably an inline ends here because unk2B8 is re-loaded?
+		unk2B8->calcNowOffsetAngle(unk120->mCompSPos[7], unk120->mCompSPos[6]);
 
 		mCurrentTarget.unk18   = unk2B8->unk10;
 		mCurrentTarget.mTarget = unk2B8->unk1C;
@@ -199,7 +179,7 @@ void CPolarSubCamera::ctrlJetCoasterCamera_()
 		newTarget = mCurrentTarget.mTarget;
 
 		JGeometry::TVec3<f32> local_bc;
-		unitVecTo(mCurrentTarget.unk18, *gpMarioPos, &local_bc);
+		unitVecTo(mCurrentTarget.unk18, SMS_GetMarioPos(), &local_bc);
 
 		JGeometry::TVec3<f32> local_b0;
 		local_b0.cross(mUp, local_bc);
@@ -253,4 +233,16 @@ TCameraJetCoaster::TCameraJetCoaster()
 	unk0 = new TCamSaveJetCoaster;
 }
 
-void TCameraJetCoaster::calcNowOffsetAngle(f32, f32) { }
+void TCameraJetCoaster::calcNowOffsetAngle(f32 stick_y, f32 stick_x)
+{
+	unk8 -= stick_y * unk0->mSLOffsetAngleXManualSpeed.get();
+	unkA += stick_x * unk0->mSLOffsetAngleYManualSpeed.get();
+
+	unk8 = MsClamp<s16>(unk8, -unk0->mSLOffsetAngleXLimit.get(),
+	                    unk0->mSLOffsetAngleXLimit.get());
+	unkA = MsClamp<s16>(unkA, -unk0->mSLOffsetAngleYLimit.get(),
+	                    unk0->mSLOffsetAngleYLimit.get());
+
+	CLBChaseAngleDecrease(&unk4, unk8, unk0->mSLOffsetAngleXChase.get());
+	CLBChaseAngleDecrease(&unk6, unkA, unk0->mSLOffsetAngleYChase.get());
+}

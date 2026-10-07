@@ -77,7 +77,7 @@ TEnemyMario::TSettingParams::TSettingParams(const char* path)
 
 void TEnemyMario::initValues()
 {
-	mHealth     = mDeParams.mHpMax.get();
+	mHealth     = mDeParams.mHPMax.get();
 	mDirty      = 0.0f;
 	mOilBrake   = 1.0f;
 	mDirtyTimer = 0;
@@ -146,8 +146,8 @@ void TEnemyMario::initModel()
 	TMario* original = gpMarioOriginal;
 	mBodyModelData   = original->mModel->getModel()->getModelData();
 	mJointIdCenter   = mBodyModelData->getJointName()->getIndex("center");
-	mJointIdChest    = mBodyModelData->getJointName()->getIndex("chn_chest");
-	mJointIdChnChest = mBodyModelData->getJointName()->getIndex("jnt_chest");
+	mJointIdChnChest = mBodyModelData->getJointName()->getIndex("chn_chest");
+	mJointIdChest    = mBodyModelData->getJointName()->getIndex("jnt_chest");
 	mJointIdArmR1    = mBodyModelData->getJointName()->getIndex("jnt_arm_R1");
 	mJointIdArmL1    = mBodyModelData->getJointName()->getIndex("jnt_arm_L1");
 	mJointIdHandR    = mBodyModelData->getJointName()->getIndex("jnt_hand_R");
@@ -204,8 +204,8 @@ void TEnemyMario::initModel()
 	frameCtrl[2].setRate(SMSGetAnmFrameRate());
 
 	SomeModelMarioStruct* setInfo = new SomeModelMarioStruct[2];
-	setInfo[0] = (SomeModelMarioStruct) { 0, 2, 0, 0x14, 0x41, 0 };
-	setInfo[1] = (SomeModelMarioStruct) { mJointIdChnChest, 2, 1, 0, 0, 1 };
+	setInfo[0]        = (SomeModelMarioStruct) { 0, 2, 0, 0x14, 0x41, 0 };
+	setInfo[1]        = (SomeModelMarioStruct) { mJointIdChest, 2, 1, 0, 0, 1 };
 	modelMario->unk10 = 2;
 	modelMario->unk24 = setInfo;
 
@@ -245,7 +245,7 @@ void TEnemyMario::initModel()
 	mMultiMtxEffect                 = new TMultiMtxEffect;
 	mMultiMtxEffect->mNumBones      = 3;
 	u16* boneIDs                    = new u16[3];
-	boneIDs[0]                      = mJointIdChnChest;
+	boneIDs[0]                      = mJointIdChest;
 	boneIDs[1]                      = mJointIdArmR1;
 	boneIDs[2]                      = mJointIdArmL1;
 	mMultiMtxEffect->mBoneIDs       = boneIDs;
@@ -308,8 +308,8 @@ void TEnemyMario::initEnemyValues()
 	mRunAwayNodeIndex    = 0;
 	mRunAwaySpeed        = 10.0f;
 
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	mEMario->onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	mEMario->onHitFilter(HIT_FILTER_NO_COLLISION);
 
 	int modelIndex = 6;
 	for (int i = 0; i < 5; ++i) {
@@ -365,13 +365,14 @@ void TEnemyMario::initEnemyValues()
 	mDisappearPosition.z = 0.0f;
 	mDisappearPosition.y = 0.0f;
 	mDisappearPosition.x = 0.0f;
-	int shadowMarioEvent = TFlagManager::getInstance()->getFlag(0x60003);
+	int shadowMarioEvent
+	    = TFlagManager::getInstance()->getFlag(MSF_SHADOW_MARIO_EVENT);
 	if (shadowMarioEvent == 0) {
-		onHitFlag(HIT_FLAG_NO_COLLISION);
-		mEMario->onHitFlag(HIT_FLAG_NO_COLLISION);
+		onHitFilter(HIT_FILTER_NO_COLLISION);
+		mEMario->onHitFilter(HIT_FILTER_NO_COLLISION);
 	} else {
-		offHitFlag(HIT_FLAG_NO_COLLISION);
-		mEMario->offHitFlag(HIT_FLAG_NO_COLLISION);
+		offHitFilter(HIT_FILTER_NO_COLLISION);
+		mEMario->offHitFilter(HIT_FILTER_NO_COLLISION);
 	}
 
 	switch (shadowMarioEvent) {
@@ -661,9 +662,11 @@ bool TEnemyMario::tryTake()
 	for (int i = 0; i < mEMario->getColNum(); ++i) {
 		THitActor* actor = mEMario->mCollisions[i];
 		u32 actorType    = actor->getActorType();
-		if (actorType == 0x04000018 || actorType == 0x2000002A
-		    || actorType == 0x20000022 || actorType == 0x20000009) {
-			if (actorType == 0x04000018) {
+		if (actorType == ACTOR_TYPE_NPC_PEACH
+		    || actorType == ACTOR_TYPE_BACK_NOZZLE_ITEM
+		    || actorType == ACTOR_TYPE_ROCKET_NOZZLE_ITEM
+		    || actorType == ACTOR_TYPE_EGG_YOSHI) {
+			if (actorType == ACTOR_TYPE_NPC_PEACH) {
 				((TLiveActor*)actor)->onLiveFlag(LIVE_FLAG_UNK100000);
 				onEMFlag(EM_FLAG_ENFORCE_TAKE);
 			}
@@ -801,8 +804,8 @@ void TEnemyMario::emTurning()
 
 void TEnemyMario::emHide()
 {
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	mEMario->onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	mEMario->onHitFilter(HIT_FILTER_NO_COLLISION);
 	++mEMDoingTimer;
 	if (!gpPollution->isPolluted(mPosition.x, mPosition.y, mPosition.z)
 	    || mEMDoingTimer > 7200) {
@@ -816,8 +819,8 @@ void TEnemyMario::emAppear()
 {
 	if (mInvincibilityFrames == 0) {
 		changeEMDoing(EM_DOING_WAITING);
-		offHitFlag(HIT_FLAG_NO_COLLISION);
-		mEMario->offHitFlag(HIT_FLAG_NO_COLLISION);
+		offHitFilter(HIT_FILTER_NO_COLLISION);
+		mEMario->offHitFilter(HIT_FILTER_NO_COLLISION);
 	}
 }
 
@@ -845,8 +848,8 @@ void TEnemyMario::startDisappear(u16 doing)
 
 void TEnemyMario::emDisappear()
 {
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	mEMario->onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	mEMario->onHitFilter(HIT_FILTER_NO_COLLISION);
 	offEMFlag(EM_FLAG_DISP_PENCIL);
 	offUnk114(UNK114_FLAG_VISIBLE);
 	changePlayerStatus(MARIO_STATUS_NOMOTION, 0, false);
@@ -860,8 +863,8 @@ void TEnemyMario::emDisappearToGate()
 		onEMFlag(EM_FLAG_DISP_PENCIL);
 	}
 
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	mEMario->onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	mEMario->onHitFilter(HIT_FILTER_NO_COLLISION);
 	runAwayMoveEffect();
 
 	if (mEMDoingTimer == 0) {
@@ -1292,9 +1295,10 @@ void TEnemyMario::emWaitingToInviteMario()
 	changePlayerStatus(MARIO_STATUS_WAIT, 0, false);
 	changeMontemanWaitingAnim();
 
-	f32 distanceToMario = mPosition.distance(*gpMarioPos);
+	f32 distanceToMario = mPosition.distance(SMS_GetMarioPos());
 	if (distanceToMario < mSettingParams->mSearchDist.get()
-	    && gpMarioPos->y < mPosition.y + mSettingParams->mSearchHeight.get()) {
+	    && SMS_GetMarioPos().y
+	           < mPosition.y + mSettingParams->mSearchHeight.get()) {
 		JGeometry::TVec3<f32> gatePoint;
 		mEMario->getTracer()->getGraph()->getGraphNode(8).getPoint(&gatePoint);
 		mFaceAngle.y
@@ -1552,7 +1556,7 @@ void TEnemyMario::reachGoal()
 
 void TEnemyMario::checkReturn()
 {
-	if (!mGroundPlane->checkFlag(BG_CHECK_FLAG_ILLEGAL))
+	if (!mGroundPlane->isIllegalData())
 		return;
 
 	int nodeIndex
@@ -1575,8 +1579,8 @@ void TEnemyMario::checkReturn()
 
 void TEnemyMario::checkController(JDrama::TGraphics*)
 {
-	f32 dx           = gpMarioPos->x - mPosition.x;
-	f32 dz           = gpMarioPos->z - mPosition.z;
+	f32 dx           = SMS_GetMarioPos().x - mPosition.x;
+	f32 dz           = SMS_GetMarioPos().z - mPosition.z;
 	mAngleToMario    = matan(dz, dx);
 	mDistanceToMario = std::sqrtf(dx * dx + dz * dz);
 

@@ -4,6 +4,7 @@
 #include <Map/MapWire.hpp>
 #include <Map/MapWireManager.hpp>
 #include <MoveBG/MapObjManager.hpp>
+#include <MoveBG/MapObjItem2.hpp>
 #include <MarioUtil/MathUtil.hpp>
 #include <Strategic/HitActor.hpp>
 #include <System/EmitterViewObj.hpp>
@@ -42,18 +43,18 @@ void TMario::getGesso(THitActor* param_1)
 		mStatusTimer = mDeParams.mSurfStartFreezeTime.get();
 		emitGetEffect();
 		switch (param_1->getActorType()) {
-		case 0x400000C5:
+		case ACTOR_TYPE_SURF_GESO_RED:
 			mSurfGesso     = gpMapObjManager->mRedGesso;
 			mSurfGessoType = SURF_GESSO_TYPE_RED;
 			break;
 
-		case 0x400000C6:
+		case ACTOR_TYPE_SURF_GESO_YELLOW:
 			mSurfGesso     = gpMapObjManager->mYellowGesso;
 			mSurfGessoType = SURF_GESSO_TYPE_YELLOW;
 			break;
 
 		default:
-		case 0x400000C7:
+		case ACTOR_TYPE_SURF_GESO_GREEN:
 			mSurfGessoType = SURF_GESSO_TYPE_GREEN;
 			mSurfGesso     = gpMapObjManager->mGreenGesso;
 			break;
@@ -68,7 +69,7 @@ void TMario::getCoin()
 	++mCoinCount;
 	emitGetCoinEffect(&mPosition);
 	incHP(1);
-	if ((TFlagManager::smInstance->getFlag(0x40002) % 50) == 0) {
+	if ((TFlagManager::smInstance->getFlag(MSF_GOLD_COIN_COUNT) % 50) == 0) {
 		TFlagManager::smInstance->incMario(1);
 		SMSGetMSound()->startSoundSystemSE(MSD_SE_SY_1UP, 0, nullptr, 0);
 	}
@@ -78,7 +79,7 @@ void TMario::getCoinRed()
 {
 	incHP(2);
 	emitGetCoinEffect(&mPosition);
-	int id = TFlagManager::smInstance->getFlag(0x60000) + 70;
+	int id = TFlagManager::smInstance->getFlag(MSF_RED_COIN_COUNT) + 70;
 	gpMarioParticleManager->emitAndBindToPosPtr(id, &mPosition, 0, this);
 }
 
@@ -93,26 +94,25 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 	if (checkFlag(MARIO_FLAG_GAME_OVER))
 		return FALSE;
 
-	// Generic "Mario hit by enemy" thump sound.
-	if (sender->checkActorType(0x20000000)) {
+	if (sender->isHitCategory(HIT_CATEGORY_ITEM)) {
 		bool playThump = true;
-		if (sender->mActorType == 0x2000000E)
+		if (sender->mActorType == ACTOR_TYPE_COIN)
 			playThump = false;
-		if (sender->mActorType == 0x2000000F)
+		if (sender->mActorType == ACTOR_TYPE_COIN_RED)
 			playThump = false;
-		if (sender->mActorType == 0x20000010)
+		if (sender->mActorType == ACTOR_TYPE_COIN_BLUE)
 			playThump = false;
-		if (sender->mActorType == 0x20000011)
+		if (sender->mActorType == ACTOR_TYPE_HIDE_OBJ)
 			playThump = false;
-		if (sender->mActorType == 0x20000013)
+		if (sender->mActorType == ACTOR_TYPE_SHINE)
 			playThump = false;
-		if (sender->mActorType == 0x2000001F)
+		if (sender->mActorType == ACTOR_TYPE_WATERGUN_ITEM)
 			playThump = false;
-		if (sender->mActorType == 0x20000026)
+		if (sender->mActorType == ACTOR_TYPE_NORMAL_NOZZLE_ITEM)
 			playThump = false;
-		if (sender->mActorType == 0x20000022)
+		if (sender->mActorType == ACTOR_TYPE_ROCKET_NOZZLE_ITEM)
 			playThump = false;
-		if (sender->mActorType == 0x2000002A)
+		if (sender->mActorType == ACTOR_TYPE_BACK_NOZZLE_ITEM)
 			playThump = false;
 
 		if (playThump == true)
@@ -121,17 +121,17 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 	}
 
 	if (message == HIT_MESSAGE_THROWN) {
-		if (sender->checkActorType(ACTOR_TYPE_PLAYER)
-		    || sender->checkActorType(ACTOR_TYPE_UNK4000000)
-		    || sender->checkActorType(ACTOR_TYPE_ENEMY)
-		    || sender->checkActorType(ACTOR_TYPE_BOSS)) {
+		if (sender->isHitCategory(HIT_CATEGORY_PLAYER)
+		    || sender->isHitCategory(HIT_CATEGORY_NPC)
+		    || sender->isHitCategory(HIT_CATEGORY_ENEMY)
+		    || sender->isHitCategory(HIT_CATEGORY_BOSS)) {
 			SMSGetMSound()->startSoundActor(MSD_SE_MA_HANEAGARI, &mPosition, 0,
 			                                &mSound, 0, 4);
 		}
-		if (sender->mActorType == 0x10000015)
+		if (sender->mActorType == ACTOR_TYPE_POI_HANA)
 			startVoice(MSD_SE_MV27_SPRISE_01);
 
-		if (sender->checkActorType(ACTOR_TYPE_UNK40000000)
+		if (sender->isHitCategory(HIT_CATEGORY_MAP_OBJECT)
 		    && gpMSound->getMarioVoiceID(0) != MSD_SE_MV28_SPRISE_SMALL_01) {
 			startVoice(MSD_SE_MV28_SPRISE_SMALL_01);
 		}
@@ -143,10 +143,9 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		return TRUE;
 	}
 
-	// Pickups (items, coins, water bottles, nozzles).
-	if (sender->checkActorType(ACTOR_TYPE_UNK20000000)) {
+	if (sender->isHitCategory(HIT_CATEGORY_ITEM)) {
 		switch (sender->mActorType) {
-		case 0x20000001: // small water restore
+		case ACTOR_TYPE_BOTTLE_SHORT:
 			if (message == HIT_MESSAGE_ATTACK) {
 				if (checkFlag(MARIO_FLAG_HAS_FLUDD)) {
 					mWaterGun->addWater(mWaterGun->getMaxWater() / 2);
@@ -155,7 +154,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case 0x20000002: // full water restore
+		case ACTOR_TYPE_BOTTLE_LARGE:
 			if (message == HIT_MESSAGE_ATTACK) {
 				if (checkFlag(MARIO_FLAG_HAS_FLUDD)) {
 					mWaterGun->addWater(mWaterGun->getMaxWater());
@@ -164,14 +163,14 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case 0x2000002C: // heart (+8 HP)
+		case ACTOR_TYPE_BOSS_EEL_TEARS:
 			if (message == HIT_MESSAGE_ATTACK) {
 				incHP(8);
 				emitGetEffect();
 				return TRUE;
 			}
 			break;
-		case 0x20000003: // +4 HP fruit and water
+		case ACTOR_TYPE_ITEM_UNK3:
 			if (message == HIT_MESSAGE_ATTACK) {
 				incHP(4);
 				if (checkFlag(MARIO_FLAG_HAS_FLUDD)) {
@@ -181,20 +180,21 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case 0x20000004: // +1 HP fruit
+		case ACTOR_TYPE_ITEM_UNK4:
 			if (message == HIT_MESSAGE_ATTACK) {
 				incHP(1);
 				emitGetEffect();
 				return TRUE;
 			}
 			break;
-		case 0x20000005:
-		case 0x20000006:
-		case 0x20000007: // collectible fruit
+		case ACTOR_TYPE_MUSHROOM1UP:
+		case ACTOR_TYPE_MUSHROOM1UP_R:
+		case ACTOR_TYPE_MUSHROOM1UP_X:
 			if (message == HIT_MESSAGE_ATTACK) {
-				if (*(s8*)((u8*)sender + 0x13A) == 0
-				    && !(*(s32*)((u8*)sender + 0x13C) < 120 ? true : false)) {
-					mHealth = mDeParams.mHpMax.get();
+				TMushroom1up* mushroom = static_cast<TMushroom1up*>(sender);
+				if (mushroom->unk13A == 0
+				    && !(mushroom->unk13C < 120 ? true : false)) {
+					mHealth = mDeParams.mHPMax.get();
 					if (checkFlag(MARIO_FLAG_HAS_FLUDD)) {
 						mWaterGun->addWater(mWaterGun->getMaxWater());
 					}
@@ -206,43 +206,44 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 			}
 			break;
 
-		case 0x20000022: // pickup rocket nozzle
+		case ACTOR_TYPE_ROCKET_NOZZLE_ITEM:
 			return getNozzle(sender, TWaterGun::Rocket);
-		case 0x20000026: // pickup hover nozzle
+		case ACTOR_TYPE_NORMAL_NOZZLE_ITEM:
 			return getNozzle(sender, TWaterGun::Hover);
-		case 0x2000002A: // pickup turbo nozzle
+		case ACTOR_TYPE_BACK_NOZZLE_ITEM:
 			return getNozzle(sender, TWaterGun::Turbo);
-		case 0x2000002B: // pickup underwater (helmet) nozzle
+		case ACTOR_TYPE_ITEM_UNK2B:
 			changePlayerStatus(MARIO_STATUS_DIVE, 0, false);
 			return getNozzle(sender, TWaterGun::Underwater);
-		case 0x2000001F: // pickup spray nozzle
+		case ACTOR_TYPE_WATERGUN_ITEM:
 			getNozzle(sender, TWaterGun::Spray);
 			return TRUE;
 
-		case 0x2000003C: // shirt/cap pickup
+		case ACTOR_TYPE_MARIO_CAP:
 			mCap->setModelActive(TMarioCap::E_CAP_MODEL_HAT);
-			mHealth = mDeParams.mHpMax.get();
+			mHealth = mDeParams.mHPMax.get();
 			emitGetEffect();
 			return TRUE;
-		case 0x2000000E: // yellow coin
+		case ACTOR_TYPE_COIN:
 			getCoin();
 			return TRUE;
-		case 0x2000000F: // red coin
+		case ACTOR_TYPE_COIN_RED:
 			getCoinRed();
 			return TRUE;
-		case 0x20000010: // blue coin
+		case ACTOR_TYPE_COIN_BLUE:
 			getCoinBlue();
 			return TRUE;
-		case 0x20000013: // 1-up shroom / pickup-action
+		case ACTOR_TYPE_SHINE:
 			if (message == HIT_MESSAGE_ATTACK
 			    && mStatus != MARIO_STATUS_WIN_DEMO) {
-				unk384          = sender;
-				mPosition.x     = sender->mPosition.x;
-				mPosition.z     = sender->mPosition.z;
-				mFaceAngle.y    = DEG2SHORTANGLE(*(f32*)((u8*)sender + 0x11C));
+				unk384       = sender;
+				mPosition.x  = sender->mPosition.x;
+				mPosition.z  = sender->mPosition.z;
+				mFaceAngle.y = DEG2SHORTANGLE(
+				    static_cast<TMapObjBase*>(sender)->mInitialRotation.y);
 				mModelFaceAngle = mFaceAngle.y;
 				setPlayerVelocity(0.0f);
-				mHealth = mDeParams.mHpMax.get();
+				mHealth = mDeParams.mHPMax.get();
 				mAir    = mMaxAir;
 				changePlayerStatus(MARIO_STATUS_WIN_DEMO, 0, true);
 				return TRUE;
@@ -251,11 +252,10 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 	}
 
-	// Bosses / NPC-class actors with bit 0x40000000.
-	if (sender->checkActorType(ACTOR_TYPE_UNK40000000)) {
+	if (sender->isHitCategory(HIT_CATEGORY_MAP_OBJECT)) {
 		switch (sender->getActorType()) {
-		case 0x4000001D: // lamp trap iron
-			if (message == HIT_MESSAGE_UNKA && !isInvincible()) {
+		case ACTOR_TYPE_LAMPTRAPIRON:
+			if (message == HIT_MESSAGE_BURN && !isInvincible()) {
 				damageExec(sender, mDmgParamsLampTrapIron.mDamage.get(),
 				           mDmgParamsLampTrapIron.mDownType.get(),
 				           mDmgParamsLampTrapIron.mWaterEmit.get(),
@@ -272,7 +272,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case 0x4000001E: // lamp trap spike
+		case ACTOR_TYPE_LAMPTRAPSPIKE:
 			if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 				damageExec(sender, mDmgParamsLampTrapSpike.mDamage.get(),
 				           mDmgParamsLampTrapSpike.mDownType.get(),
@@ -284,20 +284,20 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case 0x400000C5: // red gesso
-		case 0x400000C6: // yellow gesso
-		case 0x400000C7: // green gesso
+		case ACTOR_TYPE_SURF_GESO_RED:
+		case ACTOR_TYPE_SURF_GESO_YELLOW:
+		case ACTOR_TYPE_SURF_GESO_GREEN:
 			getGesso(sender);
 			return TRUE;
-		case 0x40000258: // grabbable hangable thing
+		case ACTOR_TYPE_BATH:
 			if (message == HIT_MESSAGE_TAKE) {
 				mHolder = (TTakeActor*)sender;
 				changePlayerStatus(MARIO_STATUS_NOMOTION, 0, false);
 				return TRUE;
 			}
 			break;
-		case 0x4000025B: // fire-class
-			if (message == HIT_MESSAGE_UNKA) {
+		case ACTOR_TYPE_BATH_WATER:
+			if (message == HIT_MESSAGE_BURN) {
 				if (!isInvincible()) {
 					damageExec(sender, mDmgParamsFire.mDamage.get(),
 					           mDmgParamsFire.mDownType.get(),
@@ -313,7 +313,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return FALSE;
 			}
 			break;
-		case 0x40000098: { // wire/zipline
+		case ACTOR_TYPE_MAP_WIRE_ACTOR: {
 			if (mHolder == nullptr) {
 				if (mStatus == MARIO_STATUS_WIRE_JUMP && mVel.y > 0.0f)
 					return FALSE;
@@ -369,10 +369,9 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 	}
 
-	// Enemy-class actors with bit 0x10000000.
-	if (sender->checkActorType(0x10000000)) {
+	if (sender->isHitCategory(HIT_CATEGORY_ENEMY)) {
 		switch (sender->getActorType()) {
-		case 0x10000003: // hamukuri (namekuri variant)
+		case ACTOR_TYPE_NAME_KURI:
 			if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 				damageExec(sender, mDmgParamsNamekuri.mDamage.get(),
 				           mDmgParamsNamekuri.mDownType.get(),
@@ -385,8 +384,8 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 			}
 			break;
 
-		case 0x10000037:
-		case 0x10000013: // dispatched as enemy common, drops cap
+		case ACTOR_TYPE_DORO_HANE_KURI:
+		case ACTOR_TYPE_DORO_HAMU_KURI:
 			if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 				mCap->setModelInactive(TMarioCap::E_CAP_MODEL_HAT);
 				damageExec(sender, mDmgParamsEnemyCommon.mDamage.get(),
@@ -400,8 +399,8 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 			}
 			break;
 
-		case 0x4000019B: // hamukuri (alternate)
-		case 0x10000002: // hamukuri
+		case ACTOR_TYPE_SROTDRAM:
+		case ACTOR_TYPE_HAMU_KURI:
 			if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 				damageExec(sender, mDmgParamsHamakuri.mDamage.get(),
 				           mDmgParamsHamakuri.mDownType.get(),
@@ -413,7 +412,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case 0x1000000A: // electric carapace / electric noko
+		case ACTOR_TYPE_ELEC_NOKONOKO:
 			if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 				damageExec(sender, mDmgParamsHamakuri.mDamage.get(),
 				           mDmgParamsHamakuri.mDownType.get(),
@@ -426,10 +425,10 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 			}
 			// fallthrough
 
-		case 0x1000000B:
-		case 0x10000021:
-		case 0x10000034: // elec attacker
-			if (message == 9 && !isInvincible()) {
+		case ACTOR_TYPE_ELEC_CARAPACE:
+		case ACTOR_TYPE_AMI_NOKO:
+		case ACTOR_TYPE_AMIKING:
+			if (message == HIT_MESSAGE_ELECTRIC_SHOCK && !isInvincible()) {
 				elecEffect();
 				changePlayerStatus(MARIO_STATUS_ELECTRIC_DAMAGE, 0, false);
 				return TRUE;
@@ -438,8 +437,8 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 			             0.0f);
 			return TRUE;
 
-		case 0x1000001F: // killer (bullet bill)
-			if ((message == HIT_MESSAGE_UNKA || message == HIT_MESSAGE_ATTACK)
+		case ACTOR_TYPE_ENEMY_UNK1F:
+			if ((message == HIT_MESSAGE_BURN || message == HIT_MESSAGE_ATTACK)
 			    && !isInvincible()) {
 				damageExec(sender, mDmgParamsKiller.mDamage.get(),
 				           mDmgParamsKiller.mDownType.get(),
@@ -458,39 +457,39 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 			}
 			break;
 
-		case 0x0800000F:
-		case 0x08000010:
-		case 0x08000011:
-		case 0x08000012:
-		case 0x10000004:
-		case 0x10000006:
-		case 0x10000007:
-		case 0x10000008:
-		case 0x10000009:
-		case 0x1000000C:
-		case 0x10000010:
-		case 0x10000012:
-		case 0x10000014:
-		case 0x10000016:
-		case 0x10000017:
-		case 0x10000018:
-		case 0x10000019:
-		case 0x1000001A:
-		case 0x1000001B:
-		case 0x1000001C:
-		case 0x1000001D:
-		case 0x10000020:
-		case 0x10000022:
-		case 0x10000024:
-		case 0x10000025:
-		case 0x10000029:
-		case 0x1000002A:
-		case 0x1000002C:
-		case 0x1000002D:
-		case 0x1000002E:
-		case 0x1000002F:
-		case 0x10000033:
-		case 0x10000036: // common enemy
+		case ACTOR_TYPE_BOSS_PAKKUN:
+		case ACTOR_TYPE_BOSS_PAKKUN_ATTACK:
+		case ACTOR_TYPE_BOSS_PAKKUN_HEAD:
+		case ACTOR_TYPE_BOSS_UNK12:
+		case ACTOR_TYPE_PAKKUN:
+		case ACTOR_TYPE_POLLUTE_OBJ:
+		case ACTOR_TYPE_GESSO:
+		case ACTOR_TYPE_MAME_GESSO:
+		case ACTOR_TYPE_ENEMY_UNK9:
+		case ACTOR_TYPE_TELESA:
+		case ACTOR_TYPE_DANGO_HAMU_KURI:
+		case ACTOR_TYPE_PUKU_PUKU:
+		case ACTOR_TYPE_LAUNCHER:
+		case ACTOR_TYPE_CHUU_HANA:
+		case ACTOR_TYPE_IGAIGA:
+		case ACTOR_TYPE_TAMA_NOKO:
+		case ACTOR_TYPE_GOROGORO:
+		case ACTOR_TYPE_HANA_SAMBO:
+		case ACTOR_TYPE_SAMBO_HEAD:
+		case ACTOR_TYPE_DPT_CANNON:
+		case ACTOR_TYPE_ENEMY_UNK1D:
+		case ACTOR_TYPE_EFFECT_OBJ:
+		case ACTOR_TYPE_BIANCO_GATE_KEEPER:
+		case ACTOR_TYPE_SEAL:
+		case ACTOR_TYPE_HAUNT_LEG:
+		case ACTOR_TYPE_KAZEKUN:
+		case ACTOR_TYPE_YUMBO:
+		case ACTOR_TYPE_KUMOKUN:
+		case ACTOR_TYPE_AMENBO:
+		case ACTOR_TYPE_ENEMY_UNK2E:
+		case ACTOR_TYPE_ENEMY_UNK2F:
+		case ACTOR_TYPE_DEBU_TELESA:
+		case ACTOR_TYPE_ENEMY_DAMAGE_OBJ:
 			if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 				damageExec(sender, mDmgParamsEnemyCommon.mDamage.get(),
 				           mDmgParamsEnemyCommon.mDownType.get(),
@@ -504,7 +503,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 			keepDistance(sender->mPosition, sender->getDamageRadius() + 30.0f,
 			             0.0f);
 			return TRUE;
-		case 0x40000053: // boss-graffito-tongue / sea attacker
+		case ACTOR_TYPE_DAMAGE_OBJ:
 			if (checkFlag(MARIO_FLAG_IN_ANY_WATER)
 			    && message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 				damageExec(sender, mDmgParamsEnemyCommon.mDamage.get(),
@@ -517,14 +516,14 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case 0x1000002B:
-		case 0x1000000D: // glistening enemy
-			if (message == HIT_MESSAGE_UNK5) {
+		case ACTOR_TYPE_ROCKET:
+		case ACTOR_TYPE_POPO:
+			if (message == HIT_MESSAGE_ATTACH) {
 				if (checkFlag(MARIO_FLAG_HAS_FLUDD))
 					mWaterGun->onFlag(TWaterGun::WATER_GUN_FLAG_UNK4);
 			}
 			break;
-		case 0x10000015: // poihana
+		case ACTOR_TYPE_POI_HANA:
 			if (!isInvincible() && message == HIT_MESSAGE_ATTACK) {
 				damageExec(sender, mDmgParamsPoihana.mDamage.get(),
 				           mDmgParamsPoihana.mDownType.get(),
@@ -536,11 +535,11 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case 0x10000005:
-		case 0x1000000E:
-		case 0x10000011:
-		case 0x1000001E:
-		case 0x10000026: // hot/fire-touching enemy
+		case ACTOR_TYPE_EFFECT_ENEMY:
+		case ACTOR_TYPE_FIRE_WANWAN:
+		case ACTOR_TYPE_FIRE_HAMU_KURI:
+		case ACTOR_TYPE_BOMB_HEI:
+		case ACTOR_TYPE_ENEMY_UNK26:
 			if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 				damageExec(sender, mDmgParamsFire.mDamage.get(),
 				           mDmgParamsFire.mDownType.get(),
@@ -571,10 +570,9 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 	}
 
-	// Remaining range-based dispatch on raw mActorType.
 	switch (sender->mActorType) {
-	case 0x08000029: // hot/fire-only
-		if (message == HIT_MESSAGE_UNKA) {
+	case ACTOR_TYPE_BOSS_UNK29:
+		if (message == HIT_MESSAGE_BURN) {
 			if (!isInvincible()) {
 				damageExec(sender, mDmgParamsFire.mDamage.get(),
 				           mDmgParamsFire.mDownType.get(),
@@ -594,8 +592,8 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		return FALSE;
 
-	case 0x0800002A:
-	case 0x0800002C:
+	case ACTOR_TYPE_BOSS_UNK2A:
+	case ACTOR_TYPE_BOSS_UNK2C:
 		if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 			damageExec(sender, mDmgParamsEnemyCommon.mDamage.get(),
 			           mDmgParamsEnemyCommon.mDownType.get(),
@@ -606,9 +604,9 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 			           mDmgParamsEnemyCommon.mInvincibleTime.get());
 			return TRUE;
 		}
-		break;
+		// fallthrough
 
-	case 0x08000001: // hinokuri-class
+	case ACTOR_TYPE_HINOKURI2:
 		if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 			damageExec(sender, mDmgParamsHinokuri.mDamage.get(),
 			           mDmgParamsHinokuri.mDownType.get(),
@@ -628,10 +626,10 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x08000005:
+	case ACTOR_TYPE_BOSS_GESSO:
 		break;
 
-	case 0x08000013: // BG tentacle
+	case ACTOR_TYPE_BOSS_UNK13:
 		switch (message) {
 		case HIT_MESSAGE_TAKE:
 			if (mHeldObject == nullptr && mHolder == nullptr) {
@@ -652,7 +650,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case HIT_MESSAGE_UNK8:
+		case HIT_MESSAGE_DETACH:
 			if (checkFlag(MARIO_FLAG_HELMET_FLW_CAMERA)) {
 				changePlayerStatus(MARIO_STATUS_DIVE, 0, true);
 			} else {
@@ -663,11 +661,11 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x0800000B:
-	case 0x0800000C:
-	case 0x0800000D:
-	case 0x0800000E: // fire enemy / boss-eel-tear-equivalent
-		if (message == HIT_MESSAGE_UNKA && !isInvincible()) {
+	case ACTOR_TYPE_BOSS_UNKB:
+	case ACTOR_TYPE_BOSS_UNKC:
+	case ACTOR_TYPE_BOSS_UNKD:
+	case ACTOR_TYPE_BOSS_UNKE:
+		if (message == HIT_MESSAGE_BURN && !isInvincible()) {
 			damageExec(sender, mDmgParamsFire.mDamage.get(),
 			           mDmgParamsFire.mDownType.get(),
 			           mDmgParamsFire.mWaterEmit.get(),
@@ -684,17 +682,17 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x08000003:
-	case 0x08000004:
-	case 0x08000006:
-	case 0x08000007:
-	case 0x08000008:
-	case 0x0800001F:
-	case 0x08000022:
-	case 0x08000023:
-	case 0x08000027:
-	case 0x1000000F:
-	case 0x10000035:
+	case ACTOR_TYPE_BOSS_EEL:
+	case ACTOR_TYPE_BOSS_MANTA:
+	case ACTOR_TYPE_BOSS_GESSO_TENTACLE:
+	case ACTOR_TYPE_BOSS_GESSO_TAKE_HIT:
+	case ACTOR_TYPE_BOSS_UNK8:
+	case ACTOR_TYPE_COASTER_KILLER:
+	case ACTOR_TYPE_BOSS_EEL_TOOTH:
+	case ACTOR_TYPE_BOSS_EEL_COLLISION:
+	case ACTOR_TYPE_BOSS_UNK27:
+	case ACTOR_TYPE_HANE_HAMU_KURI:
+	case ACTOR_TYPE_ENEMY_UNK35:
 		switch (message) {
 		case HIT_MESSAGE_TAKE:
 			if (!isInvincible() && mHeldObject == nullptr
@@ -716,7 +714,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 				return TRUE;
 			}
 			break;
-		case HIT_MESSAGE_UNK8:
+		case HIT_MESSAGE_DETACH:
 			if (checkFlag(MARIO_FLAG_HELMET_FLW_CAMERA)) {
 				changePlayerStatus(MARIO_STATUS_DIVE, 0, true);
 			} else {
@@ -727,7 +725,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x08000024: // boss-eel-class
+	case ACTOR_TYPE_BATHTUB_KILLER:
 		if (!isInvincible() && message == HIT_MESSAGE_ATTACK
 		    && (((mStatus - 0x800000) != 0x8A9) || mStatusState != 3)) {
 			damageExec(sender, mDmgParamsBGTentacle.mDamage.get(),
@@ -742,8 +740,8 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		// fallthrough
 
-	case 0x08000014:
-	case 0x08000015: // common enemy-2
+	case ACTOR_TYPE_BOSS_UNK14:
+	case ACTOR_TYPE_BOSS_UNK15:
 		if (message == HIT_MESSAGE_ATTACK && !isInvincible()) {
 			damageExec(sender, mDmgParamsHanachanBoss.mDamage.get(),
 			           mDmgParamsHanachanBoss.mDownType.get(),
@@ -756,7 +754,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x4000002C: { // big spinning enemy with rotation-based attack window
+	case ACTOR_TYPE_DOOR: {
 		if (mInput & 0x8000) {
 			s16 attackAngle = getAttackAngle(sender);
 			s16 prevYaw     = mFaceAngle.y;
@@ -779,7 +777,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 					return TRUE;
 				}
 				if (frontDiff < -0x6000 || frontDiff > 0x6000) {
-					if (message == 0x11) {
+					if (message == HIT_MESSAGE_UNK11) {
 						mPosition    = sender->mPosition;
 						mFaceAngle.y = frontYaw + 0x8000;
 						changePlayerStatus(MARIO_STATUS_DOOR_OPEN_L, 0, false);
@@ -805,8 +803,8 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		break;
 	}
 
-	case 0x08000002:
-	case 0x80000001:
+	case ACTOR_TYPE_E_MARIO:
+	case ACTOR_TYPE_MARIO:
 		if (!isInvincible()) {
 			switch (message) {
 			case HIT_MESSAGE_TAKE:
@@ -837,23 +835,23 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x4000002D:
-	case 0x4000002E:
-	case 0x40000032:
-	case 0x40000034:
-	case 0x40000035:
-	case 0x40000036:
-	case 0x40000037:
-	case 0x40000039:
-	case 0x4000003A:
-	case 0x4000005A:
-		if (message == HIT_MESSAGE_UNK8) {
+	case ACTOR_TYPE_DPTLIGHT:
+	case ACTOR_TYPE_TELEGRAPH_POLE_L:
+	case ACTOR_TYPE_MAP_OBJECT_UNK32:
+	case ACTOR_TYPE_PALM_NORMAL:
+	case ACTOR_TYPE_PALM_OUGI:
+	case ACTOR_TYPE_PALM_SAGO:
+	case ACTOR_TYPE_PALM_NATUME:
+	case ACTOR_TYPE_BANANA_TREE:
+	case ACTOR_TYPE_FRUIT_TREE:
+	case ACTOR_TYPE_WOOD_BARREL:
+		if (message == HIT_MESSAGE_DETACH) {
 			changePlayerStatus(MARIO_STATUS_WAIT, 0, false);
 			mHeldObject = nullptr;
 		}
 		break;
 
-	case 0x080000C0:
+	case ACTOR_TYPE_MODEL_GATE:
 		if (mStatus != MARIO_STATUS_WARP_IN && message == HIT_MESSAGE_TAKE) {
 			mHolder = (TTakeActor*)sender;
 			if (!checkStatusType(MARIO_STATUS_FLAG_JUMPING)) {
@@ -866,8 +864,8 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x400000A5:
-	case 0x4000009C: // bird/butterfly: keep distance only
+	case ACTOR_TYPE_LEAF_BOAT_ROTTEN:
+	case ACTOR_TYPE_LEAF_BOAT:
 		if (message == HIT_MESSAGE_ATTACK) {
 			keepDistance(sender->mPosition, sender->getDamageRadius() + 30.0f,
 			             0.0f);
@@ -875,8 +873,8 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x40000064:
-	case 0x40000393: // fruit kick targets (durian & smth else)
+	case ACTOR_TYPE_FOOTBALL:
+	case ACTOR_TYPE_FRUIT_DURIAN:
 		if (mFreezeImmunityTimer <= 0) {
 			mFreezeTimer = mDeParams.mKickFreezeTime.get();
 			rumbleStart(0x15, mMotorParams.mMotorWall.get());
@@ -886,7 +884,7 @@ BOOL TMario::receiveMessage(THitActor* sender, u32 message)
 		}
 		break;
 
-	case 0x40000246:
+	case ACTOR_TYPE_MONTE_GOAL_FLAG:
 		break;
 	}
 

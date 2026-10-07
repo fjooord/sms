@@ -2,6 +2,7 @@
 #include <Strategic/ObjModel.hpp>
 #include <Strategic/question.hpp>
 #include <Strategic/Spine.hpp>
+#include <Strategic/spcinterp.hpp>
 #include <Strategic/Binder.hpp>
 #include <System/MarDirector.hpp>
 #include <MarioUtil/MtxUtil.hpp>
@@ -38,8 +39,8 @@ TLiveActor::TLiveActor(const char* name)
 	mSpine         = nullptr;
 	unk90          = nullptr;
 
-	mLinearVelocity.setAll(0.0f);
-	mAngularVelocity.setAll(0.0f);
+	mPositionDelta.setAll(0.0f);
+	mRotationDelta.setAll(0.0f);
 
 	mVelocity.set(0.0f, 0.0f, 0.0f);
 
@@ -49,7 +50,7 @@ TLiveActor::TLiveActor(const char* name)
 	mGroundPlane         = nullptr;
 	mGroundHeight        = 0.0f;
 	mGravity             = 0.15f;
-	unkD0                = nullptr;
+	mLodAnm              = nullptr;
 	mGroundActor         = nullptr;
 	mGroundActorYaw      = 0.0f;
 	unkE8                = 1;
@@ -59,7 +60,7 @@ TLiveActor::TLiveActor(const char* name)
 	mRidePos.zero();
 
 	mGroundPlane = TMap::getIllegalCheckData();
-	if (gpMarDirector->getCurrentMap() != 8)
+	if (SMSGetMarDirector()->getCurrentMap() != 8)
 		mLiveFlag |= LIVE_FLAG_UNK2000;
 }
 
@@ -114,12 +115,13 @@ void TLiveActor::calcRideMomentum()
 			// mRidePos is from last frame here
 			MTXMultVec(mtx, &mRidePos, &rideVelocity);
 			rideVelocity -= mPosition;
-			mLinearVelocity += rideVelocity;
+			mPositionDelta += rideVelocity;
 
 			if (unkE8 >= 2) {
-				mAngularVelocity.y
-				    += MsAngleDiff(mGroundActor->mRotation.y, mGroundActorYaw);
-				mGroundActorYaw = mGroundActor->mRotation.y;
+				f32 angleDiff
+				    = MsAngleDiff(mGroundActor->mRotation.y, mGroundActorYaw);
+				mRotationDelta.y = angleDiff + mRotationDelta.y;
+				mGroundActorYaw  = mGroundActor->mRotation.y;
 			}
 		}
 	} else {
@@ -127,21 +129,21 @@ void TLiveActor::calcRideMomentum()
 	}
 }
 
-J3DModel* TLiveActor::getModel() const { return mMActor->mModel; }
+J3DModel* TLiveActor::getModel() const { return mMActor->getModel(); }
 
 Mtx* TLiveActor::getRootJointMtx() const { return nullptr; }
 
 void TLiveActor::initLodAnm(const TLodAnmIndex* param_1, int param_2,
                             f32 param_3)
 {
-	if (!unkD0)
-		unkD0 = new TLodAnm(this, param_1, param_2, param_3);
+	if (!mLodAnm)
+		mLodAnm = new TLodAnm(this, param_1, param_2, param_3);
 }
 
 void TLiveActor::init(TLiveManager* manager)
 {
 	if (!manager) {
-		if (TObjChara* chara = (TObjChara*)unk3C) {
+		if (TObjChara* chara = (TObjChara*)mCharacter) {
 			mMActorKeeper = new TMActorKeeper(nullptr, 1);
 			// TODO: could be TSMSSmplChara instead
 			mMActor = mMActorKeeper->createMActorFromDefaultBmd(
@@ -157,8 +159,8 @@ void TLiveActor::init(TLiveManager* manager)
 
 	initHitActor(0, 1, 0, mBodyRadius, mHeadHeight, mBodyRadius, mHeadHeight);
 
-	onHitFlag(HIT_FLAG_NO_COLLISION);
-	offLiveFlag(LIVE_FLAG_UNK400);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
+	offLiveFlag(LIVE_FLAG_FORCE_SHADOW);
 
 	if (!mAnmSound)
 		initAnmSound();
@@ -189,7 +191,7 @@ void TLiveActor::bind()
 	}
 
 	JGeometry::TVec3<f32> nextPos = mPosition;
-	nextPos += mLinearVelocity;
+	nextPos += mPositionDelta;
 	nextPos += mVelocity;
 
 	// Apply gravity & air resistance
@@ -210,7 +212,7 @@ void TLiveActor::bind()
 
 		// Will we hit the ground next frame?
 		if (nextPos.y <= mGroundHeight + 0.05f) {
-			if (mGroundPlane->checkFlag(BG_CHECK_FLAG_ILLEGAL))
+			if (mGroundPlane->isIllegalData())
 				kill();
 			offLiveFlag(LIVE_FLAG_AIRBORNE);
 			mVelocity.set(0.0f, 0.0f, 0.0f);
@@ -225,25 +227,22 @@ void TLiveActor::bind()
 	                                 &nextPos.z, mBodyRadius);
 
 	// We're done, this is the displacement for this frame
-	mLinearVelocity = nextPos - mPosition;
+	mPositionDelta = nextPos - mPosition;
 }
 
 void TLiveActor::control()
 {
-	// TODO: what is unk90???
-	if (unk90 == nullptr || *(int*)((char*)unk90 + 4) == 0) {
+	if (unk90 == nullptr || unk90->mStepsToDo == 0) {
 		if (mSpine)
 			mSpine->update();
+	} else if (!mSpine) {
+		if (unk90 != nullptr && unk90->mStepsToDo != 0)
+			unk90->update();
+	} else if (mSpine->getCurrentNerve() != nullptr
+	           || mSpine->getVertebraeCount() > 0) {
+		mSpine->update();
 	} else {
-		if (!mSpine) {
-			if (unk90 && *(int*)((char*)unk90 + 4) != 0) {
-				// call on unk90
-			}
-		} else if (mSpine->isIdle()) {
-			// call on unk90
-		} else {
-			mSpine->update();
-		}
+		unk90->update();
 	}
 }
 
@@ -269,25 +268,24 @@ void TLiveActor::setGroundCollision()
 {
 	if (!mMapCollisionManager)
 		return;
-	if (!mMapCollisionManager->unk8)
-		return;
 
-	mMapCollisionManager->unk8->moveSRT(mPosition, mRotation, mScaling);
+	mMapCollisionManager->moveActiveCollisionSRT(mPosition, mRotation,
+	                                             mScaling);
 }
 
 void TLiveActor::moveObject()
 {
 	ensureTakeSituation();
 
-	mLinearVelocity.zero();
-	mAngularVelocity.zero();
+	mPositionDelta.zero();
+	mRotationDelta.zero();
 
 	control();
 	calcRideMomentum();
 	bind();
 
-	mPosition += mLinearVelocity;
-	mRotation += mAngularVelocity;
+	mPosition += mPositionDelta;
+	mRotation += mRotationDelta;
 
 	setGroundCollision();
 	calcRidePos();
@@ -299,30 +297,30 @@ void TLiveActor::requestShadow()
 		return;
 
 	if (!(mLiveFlag & (LIVE_FLAG_UNK200 | LIVE_FLAG_CLIPPED_OUT))
-	    || (mLiveFlag & LIVE_FLAG_UNK400)) {
-		TCircleShadowRequest local_2c;
+	    || (mLiveFlag & LIVE_FLAG_FORCE_SHADOW)) {
+		TCircleShadowRequest shadow;
 
-		local_2c.mPosition = mPosition;
+		shadow.mPosition = mPosition;
 
 		if (!isAirborne()) {
-			local_2c.mPosition.y       = mGroundHeight;
-			local_2c.mNeedsGroundCheck = 0;
+			shadow.mPosition.y       = mGroundHeight;
+			shadow.mNeedsGroundCheck = false;
 		}
 
-		local_2c.mRadiusX = local_2c.mRadiusZ = mScaledBodyRadius;
+		shadow.mRadiusX = shadow.mRadiusZ = mScaledBodyRadius;
 
-		local_2c.mShadowType = getShadowType();
-		local_2c.mRotationY  = mRotation.y;
+		shadow.mShadowType = getShadowType();
+		shadow.mRotationY  = mRotation.y;
 
-		if (mLiveFlag & LIVE_FLAG_UNK400) {
-			gpBindShadowManager->forceRequest(local_2c, getActorType());
+		if (mLiveFlag & LIVE_FLAG_FORCE_SHADOW) {
+			gpBindShadowManager->forceRequest(shadow, getActorType());
 		} else {
-			gpBindShadowManager->request(local_2c, getActorType());
+			gpBindShadowManager->request(shadow, getActorType());
 		}
 	}
 
 	if (!(mLiveFlag & (LIVE_FLAG_UNK200 | LIVE_FLAG_CLIPPED_OUT))
-	    && !checkActorType(ACTOR_TYPE_UNK40000000)) {
+	    && !isHitCategory(HIT_CATEGORY_MAP_OBJECT)) {
 		gpQuestionManager->request(mPosition, mScaledBodyRadius);
 	}
 }
@@ -348,8 +346,19 @@ void TLiveActor::perform(u32 cue, JDrama::TGraphics* graphics)
 		updateAnmSound();
 
 	if (mMActor) {
-		if (cue & CUE_CALC_ANIM)
+#ifdef VERSION_GMSP01
+		f32 frame;
+#endif
+		if (cue & CUE_CALC_ANIM) {
 			mMActor->frameUpdate();
+#ifdef VERSION_GMSP01
+			if (mLiveFlag & LIVE_FLAG_CALC_INT_FRAME) {
+				J3DFrameCtrl* ctrl = mMActor->getFrameCtrl(0);
+				frame              = ctrl->getFrame();
+				ctrl->setFrame((int)frame);
+			}
+#endif
+		}
 
 		if (cue & CUE_CALC_VIEW)
 			requestShadow();
@@ -358,6 +367,10 @@ void TLiveActor::perform(u32 cue, JDrama::TGraphics* graphics)
 			if (cue & CUE_CALC_ANIM) {
 				calcRootMatrix();
 				mMActor->calc();
+#ifdef VERSION_GMSP01
+				if (mLiveFlag & LIVE_FLAG_CALC_INT_FRAME)
+					mMActor->getFrameCtrl(0)->setFrame(frame);
+#endif
 			}
 
 			if (cue & CUE_CALC_VIEW)
@@ -369,27 +382,27 @@ void TLiveActor::perform(u32 cue, JDrama::TGraphics* graphics)
 	}
 }
 
-void TLiveActor::performOnlyDraw(u32 param_1, JDrama::TGraphics* param_2)
+void TLiveActor::performOnlyDraw(u32 cue, JDrama::TGraphics* graphics)
 {
 	if (mLiveFlag & (LIVE_FLAG_UNK200 | LIVE_FLAG_DEAD))
 		return;
 	if (!mMActor)
 		return;
 
-	if (param_1 & CUE_CALC_VIEW)
+	if (cue & CUE_CALC_VIEW)
 		requestShadow();
 
 	if (!(mLiveFlag & (LIVE_FLAG_HIDDEN | LIVE_FLAG_CLIPPED_OUT))) {
-		if (param_1 & CUE_CALC_ANIM) {
+		if (cue & CUE_CALC_ANIM) {
 			calcRootMatrix();
 			mMActor->calc();
 		}
 
-		if (param_1 & CUE_CALC_VIEW)
+		if (cue & CUE_CALC_VIEW)
 			mMActor->viewCalc();
 
-		if (param_1 & CUE_ENTRY)
-			drawObject(param_2);
+		if (cue & CUE_ENTRY)
+			drawObject(graphics);
 	}
 }
 
@@ -422,7 +435,7 @@ int TLiveActor::getJointTransByIndex(int param_1,
 		return param_1;
 	}
 
-	MtxPtr mtx = mMActor->mModel->getAnmMtx(param_1);
+	MtxPtr mtx = mMActor->getModel()->getAnmMtx(param_1);
 	param_2->set(mtx[0][3], mtx[1][3], mtx[2][3]);
 	return param_1;
 }
@@ -442,10 +455,15 @@ void TLiveActor::initAnmSound()
 	if (mAnmSound)
 		return;
 
-	if (checkActorType(0x4000000))
-		mAnmSound = new MAnmSoundNPC(SMSGetMSound());
-	else
-		mAnmSound = new MAnmSound(SMSGetMSound());
+	MAnmSoundNPC* npcAnmSound;
+	MAnmSound* anmSound;
+	if (isHitCategory(HIT_CATEGORY_NPC)) {
+		npcAnmSound = new MAnmSoundNPC(SMSGetMSound());
+		mAnmSound   = npcAnmSound;
+	} else {
+		anmSound  = new MAnmSound(SMSGetMSound());
+		mAnmSound = anmSound;
+	}
 
 	mAnmSound->initAnmSound(nullptr, 1, 0.0f);
 }
@@ -482,11 +500,8 @@ void TLiveActor::setCurAnmSound()
 
 	if (mMActor) {
 		int idx = mMActor->getCurAnmIdx(ANM_TYPE_BCK);
-		if (idx >= 0) {
-			const char** table = getBasNameTable();
-
-			name = !table ? nullptr : table[idx];
-		}
+		if (idx >= 0)
+			name = getBas(idx);
 	}
 
 	setAnmSound(name);

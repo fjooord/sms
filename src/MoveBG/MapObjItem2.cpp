@@ -99,7 +99,7 @@ void TMushroom1up::control()
 		mPosition.set(pos);
 
 		mScaling.set(1.5f, 1.5f, 1.5f);
-		mLinearVelocity.zero();
+		mPositionDelta.zero();
 		mVelocity.zero();
 		unk13C++;
 		return;
@@ -107,7 +107,7 @@ void TMushroom1up::control()
 
 	unk13C++;
 	if (unk139 == 2) {
-		mLinearVelocity.zero();
+		mPositionDelta.zero();
 		mVelocity.zero();
 		return;
 	}
@@ -131,15 +131,15 @@ void TMushroom1up::control()
 	f32 delta = MsAngleDiff(angle, mRotation.y);
 	f32 step;
 	if (delta > 0.0f)
-		step = MsClamp(delta, -1.0f, 1.0f);
+		step = MsMin(delta, 1.0f);
 	else
-		step = MsClamp(delta, -1.0f, 1.0f);
+		step = MsMax(delta, -1.0f);
 
 	mRotation.y = MsWrap(mRotation.y + step, 0.0f, 360.0f);
 
 	VECNormalize(&diff, &diff);
 	diff.scale(3.8f);
-	mLinearVelocity.add(diff);
+	mPositionDelta.add(diff);
 }
 
 void TMushroom1up::perform(u32 cue, JDrama::TGraphics* graphics)
@@ -164,7 +164,7 @@ void TJumpBase::initMapObj()
 {
 	TMapObjBase::initMapObj();
 	if (mMapCollisionManager) {
-		TMapCollisionBase* base = mMapCollisionManager->unk8;
+		TMapCollisionBase* base = mMapCollisionManager->getActiveCollision();
 		base->setAllBGType(7);
 		base->setAllActor(this);
 		base->setAllData(0x2710);
@@ -182,16 +182,16 @@ void TJumpBase::ensureTakeSituation()
 
 BOOL TJumpBase::receiveMessage(THitActor* sender, u32 message)
 {
-	if (sender->isActorType(0x80000001)) {
+	if (sender->isActorType(ACTOR_TYPE_MARIO)) {
 		if (message == HIT_MESSAGE_TAKE) {
 			if (unk138 == 0) {
 				mHolder = (TTakeActor*)sender;
-				onHitFlag(HIT_FLAG_NO_COLLISION);
-				if (mMapCollisionManager && mMapCollisionManager->unk8)
-					mMapCollisionManager->unk8->remove();
+				onHitFilter(HIT_FILTER_NO_COLLISION);
+				if (mMapCollisionManager)
+					mMapCollisionManager->removeActiveCollision();
 				return TRUE;
 			}
-		} else if (message == HIT_MESSAGE_UNK8) {
+		} else if (message == HIT_MESSAGE_DETACH) {
 			mHolder = nullptr;
 			unk13C  = 0;
 			unk138  = 2;
@@ -213,7 +213,7 @@ BOOL TJumpBase::receiveMessage(THitActor* sender, u32 message)
 		}
 	}
 
-	if (sender->isActorType(0x1000001) && unk138 == 3) {
+	if (sender->isActorType(ACTOR_TYPE_WATER) && unk138 == 3) {
 		unk13C = 0;
 		unk138 = 1;
 		return TRUE;
@@ -261,9 +261,9 @@ void TJumpBase::control()
 
 	case 3:
 		if (unk13C == 0) {
-			offHitFlag(HIT_FLAG_NO_COLLISION);
+			offHitFilter(HIT_FILTER_NO_COLLISION);
 			if (mMapCollisionManager)
-				mMapCollisionManager->getUnk8()->setUp();
+				mMapCollisionManager->getActiveCollision()->setUp();
 
 			getMActor()->setBck("jumpbase_set");
 			J3DFrameCtrl* ctrl = getMActor()->getFrameCtrl(ANM_TYPE_BCK);
@@ -293,8 +293,9 @@ void TJumpBase::control()
 
 	case 1:
 		if (unk13C == 0) {
-			if (mMapCollisionManager && mMapCollisionManager->getUnk8())
-				mMapCollisionManager->getUnk8()->remove();
+			if (mMapCollisionManager
+			    && mMapCollisionManager->getActiveCollision())
+				mMapCollisionManager->getActiveCollision()->remove();
 
 			getMActor()->setBck("jumpbase_shrink");
 			J3DFrameCtrl* ctrl = getMActor()->getFrameCtrl(ANM_TYPE_BCK);
@@ -327,7 +328,7 @@ void TJumpBase::control()
 	case 5:
 		if (unk13C == 0) {
 			onLiveFlag(LIVE_FLAG_AIRBORNE);
-			int angle = *gpMarioAngleY;
+			int angle = SMS_GetMarioAngleY();
 			mVelocity
 			    = JGeometry::TVec3<f32>(JMASSin(angle), 0.0f, JMASCos(angle));
 			JGeometry::TVec3<f32> v2 = mVelocity;

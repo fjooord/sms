@@ -1,6 +1,7 @@
 #ifndef FLAG_MANAGER_HPP
 #define FLAG_MANAGER_HPP
 
+#include <System/FlagManagerFlags.hpp>
 #include <JSystem/JKernel/JKRHeap.hpp>
 #include <JSystem/JSupport/JSUMemoryInputStream.hpp>
 #include <JSystem/JSupport/JSUMemoryOutputStream.hpp>

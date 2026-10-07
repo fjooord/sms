@@ -92,13 +92,13 @@ void TSpineEnemy::calcEnemyRootMatrix()
 		MsMtxSetRotRPH(mtx, mRotation.x, mRotation.y, mRotation.z);
 	} else {
 		if (unk130 >= 2 && !isAirborne() && unk138 != nullptr) {
+			JGeometry::TVec3<f32> v3(0.0f, 1.0f, 0.0f);
 			JGeometry::TVec3<f32> v2 = unk138->getNormal();
 
 			JGeometry::TVec3<f32> v1;
-			v1.cross(v2, JGeometry::TVec3<f32>(0.0f, 1.0f, 0.0f));
+			v1.cross(v2, v3);
 			v1.normalize();
 
-			JGeometry::TVec3<f32> v3;
 			v3.cross(v1, v2);
 			v3.normalize();
 
@@ -115,16 +115,15 @@ void TSpineEnemy::calcEnemyRootMatrix()
 			mtx[1][3] = 0.0f;
 			mtx[2][3] = 0.0f;
 		} else {
-			if (unk130 >= 1
-			    && !mGroundPlane->checkFlag(BG_CHECK_FLAG_ILLEGAL)) {
-				JGeometry::TVec3<f32> v1(MsSin(mRotation.y), 0.0f,
+			if (unk130 >= 1 && !mGroundPlane->isIllegalData()) {
+				JGeometry::TVec3<f32> v3(MsSin(mRotation.y), 0.0f,
 				                         MsCos(mRotation.y));
 
 				JGeometry::TVec3<f32> v2 = mGroundPlane->getNormal();
-				v1.cross(v2, v1);
+				JGeometry::TVec3<f32> v1;
+				v1.cross(v2, v3);
 				v1.normalize();
 
-				JGeometry::TVec3<f32> v3;
 				v3.cross(v1, v2);
 				v3.normalize();
 
@@ -177,7 +176,7 @@ void TSpineEnemy::resetToPosition(const JGeometry::TVec3<f32>& position)
 	offLiveFlag(LIVE_FLAG_DEAD);
 	reset();
 	mHitPoints = getSaveParam() ? getSaveParam()->mSLHitPointMax.get() : 1;
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	mVelocity = JGeometry::TVec3<f32>(0.0f, 5.0f, 0.0f);
 	onLiveFlag(LIVE_FLAG_UNK8000);
 	onLiveFlag(LIVE_FLAG_AIRBORNE);
@@ -196,7 +195,7 @@ void TSpineEnemy::resetSRTV(const JGeometry::TVec3<f32>& position,
 	mRotation  = rotation;
 	mScaling   = scaling;
 	mHitPoints = getSaveParam() ? getSaveParam()->mSLHitPointMax.get() : 1;
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 	mVelocity = velocity;
 	onLiveFlag(LIVE_FLAG_UNK8000);
 	onLiveFlag(LIVE_FLAG_AIRBORNE);
@@ -244,8 +243,8 @@ f32 TSpineEnemy::calcTurnSpeedToReach(f32 march_speed, f32 param_2) const
 void TSpineEnemy::updateSquareToMario()
 {
 	// assert?
-	(void)gpMarioPos;
-	mDistToMarioSquared = PSVECSquareDistance(&mPosition, gpMarioPos);
+	(void)&SMS_GetMarioPos();
+	mDistToMarioSquared = PSVECSquareDistance(&mPosition, &SMS_GetMarioPos());
 }
 
 BOOL TSpineEnemy::receiveMessage(THitActor* sender, u32 message)
@@ -274,9 +273,7 @@ void TSpineEnemy::setGoalPathFromGraph()
 	JGeometry::TVec3<f32> local_48;
 	unk124->getCurrent().getPoint(&local_48);
 	TPathNode local_3c(local_48);
-	unkF4  = local_3c;
-	unk104 = local_3c;
-	unk114.clear();
+	setGoalPath(local_3c);
 }
 
 void TSpineEnemy::goToInitialVisibleNode(f32, f32) { }
@@ -402,8 +399,8 @@ static inline JGeometry::TVec3<f32> polarXZ(f32 theta, f32 radius)
 
 void TSpineEnemy::goToDirLimitedNextGraphNode(f32 param_1)
 {
-	int currIdx = unk124->mCurrIdx;
 	int prevIdx = unk124->mPrevIdx;
+	int currIdx = unk124->mCurrIdx;
 	if (currIdx < 0) {
 		unk124->setTo(unk124->unk0->findNearestNodeIndex(mPosition, -1));
 	} else {
@@ -422,14 +419,15 @@ void TSpineEnemy::goToDirLimitedNextGraphNode(f32 param_1)
 
 void TSpineEnemy::updateStayCount(f32) { }
 
-bool TSpineEnemy::turnToCurPathNode(f32 param_1)
+BOOL TSpineEnemy::turnToCurPathNode(f32 param_1)
 {
-	JGeometry::TVec3<f32> tmp = getUnkF4().getPoint();
+	const JGeometry::TVec3<f32>& point = getUnkF4().getPoint();
+	JGeometry::TVec3<f32> tmp          = point;
 	tmp -= mPosition;
 
 	f32 rot = MsAngleDiff(MsGetRotFromZaxisY(tmp), mRotation.y);
 
-	bool uVar2 = false;
+	BOOL uVar2 = false;
 	if (rot > 0.0f) {
 		if (rot < param_1) {
 			uVar2 = true;
@@ -475,25 +473,25 @@ void TSpineEnemy::walkToCurPathNode(f32 march_speed, f32 turn_speed,
 	f32 fVar5 = fVar2;
 	if (fVar7 > fVar3 * 2.0f) {
 		if (fVar2 > 0.0f) {
-			fVar5 = fVar2 > turn_speed ? fVar2 : turn_speed;
+			fVar5 = MsMin(fVar2, turn_speed);
 		} else {
-			fVar5 = fVar2 > -turn_speed ? fVar2 : -turn_speed;
+			fVar5 = MsMax(fVar2, -turn_speed);
 		}
 	} else {
 		f32 fVar3 = calcTurnSpeedToReach(march_speed, fVar7 * 0.5f);
 
 		if (fVar2 > 0.0f) {
-			fVar5 = fVar2 > fVar3 ? fVar2 : fVar3;
+			fVar5 = MsMin(fVar2, fVar3);
 		} else {
-			fVar5 = fVar2 > -fVar3 ? fVar2 : -fVar3;
+			fVar5 = MsMax(fVar2, -fVar3);
 		}
 	}
 
 	mRotation.y = MsWrap(mRotation.y + fVar5, 0.0f, 360.0f);
 
-	JGeometry::TVec3<f32> vel = mLinearVelocity;
+	JGeometry::TVec3<f32> vel = mPositionDelta;
 	vel += polarXZ(mRotation.y, march_speed);
-	mLinearVelocity = vel;
+	mPositionDelta = vel;
 
 	if (abs(fVar7 - unk12C) < 100.0f) {
 		unk128 += 1;
@@ -543,17 +541,17 @@ void TSpineEnemy::zigzagToCurPathNode(f32 march_speed, f32 turn_speed,
 	f32 fVar2;
 	if (dVar9 > fVar3 * 2.0f) {
 		if (fVar1 > 0.0f) {
-			fVar2 = fVar1 > turn_speed ? fVar1 : turn_speed;
+			fVar2 = MsMin(fVar1, turn_speed);
 		} else {
-			fVar2 = fVar1 > -turn_speed ? fVar1 : -turn_speed;
+			fVar2 = MsMax(fVar1, -turn_speed);
 		}
 	}
 
 	mRotation.y = MsWrap(mRotation.y + fVar2, 0.0f, 360.0f);
 
-	JGeometry::TVec3<f32> vel = mLinearVelocity;
+	JGeometry::TVec3<f32> vel = mPositionDelta;
 	vel += polarXZ(mRotation.y, march_speed);
-	mLinearVelocity = vel;
+	mPositionDelta = vel;
 
 	if (abs(dVar9 - unk12C) < 100.0f) {
 		unk128 += 1;
@@ -574,7 +572,8 @@ void TSpineEnemy::doShortCut()
 		return;
 	}
 
-	TPathNode node = unk114.pop();
+	TPathNode node;
+	node = unk114.pop();
 
 	JGeometry::TVec3<f32> local_28 = node.getPoint() - mPosition;
 	if (local_28.x == 0.0f && local_28.y == 0.0f && local_28.z == 0.0f)

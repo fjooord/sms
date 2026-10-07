@@ -50,8 +50,7 @@ void TRideCloud::setGroundCollision()
 		// TODO: this is used in MapObjRailBlock too, inline global?
 		TMtx34f mtx;
 		mtx.set(getModel()->getAnmMtx(0));
-		if (TMapCollisionBase* col = mMapCollisionManager->unk8)
-			col->moveMtx(mtx);
+		mMapCollisionManager->moveActiveCollisionMtx(mtx);
 	}
 }
 
@@ -87,7 +86,7 @@ void TRideCloud::load(JSUMemoryInputStream& stream)
 	unk176.a = 0xff;
 	SMS_InitPacket_TwoTevColor(getModel(), 0, GX_TEVREG0, &unk16E, GX_TEVREG1,
 	                           &unk176);
-	offLiveFlag(LIVE_FLAG_UNK400);
+	offLiveFlag(LIVE_FLAG_FORCE_SHADOW);
 	onLiveFlag(LIVE_FLAG_UNK8);
 }
 
@@ -96,8 +95,8 @@ u32 TRideCloud::getShadowType() { return SHADOW_TYPE_CIRCLE; }
 void TRideCloud::control()
 {
 	TMapObjBase::control();
-	TMapCollisionBase* col = mMapCollisionManager->unk8;
-	if (*gpMarioSpeedY > 0.0f)
+	TMapCollisionBase* col = mMapCollisionManager->getActiveCollision();
+	if (SMS_GetMarioSpeedY() > 0.0f)
 		col->setAllBGType(0x400);
 	else
 		col->setAllBGType(0);

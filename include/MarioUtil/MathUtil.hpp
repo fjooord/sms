@@ -129,6 +129,20 @@ template <class T> inline T MsWrap(T t, T l, T r)
 	return t;
 }
 
+// fabricated
+// NOTE: these MUST take references, as constants passed to them are stored in
+// sdata, not sdata2. See also the note on TParamRT::set.
+template <class T> inline T MsMin(const T& a, const T& b)
+{
+	return a > b ? b : a;
+}
+
+// fabricated
+template <class T> inline T MsMax(const T& a, const T& b)
+{
+	return a > b ? a : b;
+}
+
 template <class T> inline T MsClamp(T t, T l, T r)
 {
 	if (t > r)
@@ -146,6 +160,18 @@ inline f32 MsAngleDiff(f32 alpha, f32 beta)
 
 // fabricated
 inline f32 MsAngleWrap(f32 angle) { return MsWrap(angle, 0.0f, 360.0f); }
+
+// fabricated
+inline f32 MsAngleBetween(const JGeometry::TVec3<f32>& a,
+                          const JGeometry::TVec3<f32>& b)
+{
+	JGeometry::TVec3<f32> cross;
+	cross.cross(a, b);
+	f32 crossMag = cross.length();
+	f32 dot      = a.dot(b);
+	f32 angle    = atan2f(crossMag, dot);
+	return fabsf(angle);
+}
 
 /**
  * @brief Checks whether the point \p target is within the line of sight of

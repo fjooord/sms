@@ -120,13 +120,13 @@ void TMameGesso::load(JSUMemoryInputStream& stream)
 void TMameGesso::init(TLiveManager* param_1)
 {
 	TWalkerEnemy::init(param_1);
-	mActorType = 0x10000008;
+	mActorType = ACTOR_TYPE_MAME_GESSO;
 	unk150     = 0x11;
 	mSpine->initWith(&TNerveMameGessoGraphJumpWander::theNerve());
 	unk194 = (TMameGessoSaveLoadParams*)getSaveParam();
 	unk198 = new TMapCollisionMove;
 	unk198->init(2, 0, 0, nullptr);
-	onHitFlag(HIT_FLAG_NO_COLLISION);
+	onHitFilter(HIT_FILTER_NO_COLLISION);
 	unk1D4 = mPosition;
 }
 
@@ -188,13 +188,13 @@ void TMameGesso::reset()
 
 bool TMameGesso::isHitValid(u32 param_1)
 {
-	if (param_1 == 1)
+	if (param_1 == HIT_MESSAGE_HIP_DROP)
 		unk1D1 = 0;
 	else
 		unk1D1 = 1;
 
 	if (mSpine->getCurrentNerve() == &TNerveMameGessoGraphJumpWander::theNerve()
-	    && param_1 == 1) {
+	    && param_1 == HIT_MESSAGE_HIP_DROP) {
 		unk1D0 = 1;
 		mSpine->pushNerve(&TNerveSmallEnemyDie::theNerve());
 		return false;
@@ -547,16 +547,14 @@ DEFINE_NERVE(TNerveMameGessoThrown, TLiveActor)
 	if (spine->getTime() == 0) {
 		TMameGessoSaveLoadParams* params = self->getSaveLoadParam();
 
-		// TODO: ugly matching
-		s16 angle        = *gpMarioAngleY & 0xffff;
-		f32 throwPower   = *gpMarioThrowPower;
-		f32 velX         = throwPower * JMASSin(angle);
-		f32 velZ         = throwPower * JMASCos(angle);
-		f32 thrownRateXZ = params->mSLThrownRateXZ.get();
-		JGeometry::TVec3<f32> vel(thrownRateXZ * velX,
-		                          params->mSLThrownVY.get(),
-		                          thrownRateXZ * velZ);
-
+		f32 power = SMS_GetMarioThrowPower();
+		f32 rate  = params->mSLThrownRateXZ.get();
+		JGeometry::TVec3<f32> vel;
+		f32 c = JMASCos(SMS_GetMarioAngleY());
+		f32 s = JMASSin(SMS_GetMarioAngleY());
+		vel.x = rate * (power * s);
+		vel.y = params->mSLThrownVY.get();
+		vel.z = rate * (power * c);
 		self->setVelocity(vel);
 
 		self->mPosition.y += 2.0f;
@@ -587,16 +585,16 @@ DEFINE_NERVE(TNerveMameGessoObject, TLiveActor)
 	TMameGesso* self = (TMameGesso*)spine->getBody();
 
 	if (SMS_IsMarioStatusTypeSwimming()) {
-		self->offHitFlag(HIT_FLAG_NO_COLLISION);
+		self->offHitFilter(HIT_FILTER_NO_COLLISION);
 		self->unk190 = self->unk154 * 2.5f;
 		self->expandCollision();
 	} else {
-		self->onHitFlag(HIT_FLAG_NO_COLLISION);
+		self->onHitFilter(HIT_FILTER_NO_COLLISION);
 	}
 
 	if (spine->getTime() == 0) {
 		self->setBckAnm(2);
-		self->onHitFlag(1);
+		self->onHitFilter(HIT_FILTER_NO_COLLISION);
 		self->calcObjCollision();
 		self->entryObjCollision();
 		self->generateEffectColumWater();
@@ -615,7 +613,7 @@ DEFINE_NERVE(TNerveMameGessoObject, TLiveActor)
 			} else if (self->isBckAnm(18)) {
 				self->calcObjCollision();
 				self->entryObjCollision();
-				self->offHitFlag(HIT_FLAG_NO_COLLISION);
+				self->offHitFilter(HIT_FILTER_NO_COLLISION);
 				self->mPosition.y = self->unk1E4;
 				self->unk1E8      = 0.0f;
 				spine->pushAfterCurrent(&TNerveMameGessoWait::theNerve());

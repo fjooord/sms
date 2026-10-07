@@ -1,6 +1,7 @@
 #ifndef MOVE_BG_ITEM_HPP
 #define MOVE_BG_ITEM_HPP
 
+#include <stdint.h>
 #include <MoveBG/MapObjGeneral.hpp>
 
 class TMirrorActor;
@@ -61,7 +62,7 @@ public:
 	virtual void load(JSUMemoryInputStream&);
 
 public:
-	/* 0x158 */ u32 unk158;
+	/* 0x158 */ s32 unk158;
 };
 
 class TCoinEmpty : public TCoin {
@@ -113,7 +114,7 @@ public:
 
 	void appearWithDemo(const char*);
 	void appearSimple(int);
-	static s32 appearWithTimeCallback(u32, u32);
+	static s32 appearWithTimeCallback(uintptr_t, u32);
 	void appearWithTime(int, int, int, int);
 	void movingDown();
 	void movingUp();

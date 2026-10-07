@@ -15,6 +15,13 @@
 #include <MSound/MSoundBGM.hpp>
 #include <M3DUtil/InfectiousStrings.hpp>
 
+// dummy: emits @2602 and @2604
+static void dummy(Vec* v)
+{
+	*v = (Vec) { 0.0f, 0.0f, 0.0f };
+	*v = (Vec) { 1.0f, 1.0f, 1.0f };
+}
+
 static const char* DebuTelesa_bastable[] = {
 	"/scene/DebuTelesa/bas/debuTelesa_wait.bas",
 };
@@ -44,8 +51,9 @@ void TDebuTelesa::reset() { }
 
 void TDebuTelesa::initCollision()
 {
-	initHitActor(0x10000033, 1, 0x80000000, 10.0f, 10.0f, 10.0f, 10.0f);
-	offHitFlag(HIT_FLAG_NO_COLLISION);
+	initHitActor(ACTOR_TYPE_DEBU_TELESA, 1, HIT_CATEGORY_PLAYER, 10.0f, 10.0f,
+	             10.0f, 10.0f);
+	offHitFilter(HIT_FILTER_NO_COLLISION);
 }
 
 void TDebuTelesa::calcRootMatrix()
